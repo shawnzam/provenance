@@ -8,22 +8,33 @@ Runs entirely on your machine. No accounts, no cloud sync.
 
 ---
 
-## Install
+## Quick start — Claude Desktop
+
+**No OpenAI key needed.** Connect Provenance to Claude Desktop and use Claude as your interface.
+
+**1. Install**
 
 ```bash
 uv tool install git+https://github.com/shawnzam/provenance
 provenance init
 ```
 
-See [Setup](setup.md) for configuration details.
+**2. Add to `~/Library/Application Support/Claude/claude_desktop_config.json`**
 
----
+```json
+{
+  "mcpServers": {
+    "provenance": {
+      "command": "/Users/yourname/.local/bin/uv",
+      "args": ["--directory", "/path/to/provenance", "run", "python", "mcp_server.py"]
+    }
+  }
+}
+```
 
-## Two ways to use it
+Replace `/Users/yourname/.local/bin/uv` with `$(which uv)` and `/path/to/provenance` with your clone path.
 
-### Claude Desktop (recommended — no OpenAI key required)
-
-Connect Provenance to Claude Desktop via MCP. Use Claude as your interface — ask questions, log meetings, search your notes — all through a conversation.
+**3. Restart Claude Desktop and ask anything**
 
 ```
 What meetings do I have this week?
@@ -32,17 +43,19 @@ Add an action item to follow up with Roger by Friday
 What did we discuss about AI governance last month?
 ```
 
-Claude handles the natural language. Provenance handles the data. See [Claude Desktop](mcp.md).
+See [Claude Desktop](mcp.md) for the full guide.
 
-### Standalone CLI + REPL
+---
 
-Use Provenance on its own with an OpenAI key. The interactive REPL is the primary standalone interface:
+## Standalone CLI + REPL
+
+Prefer a terminal interface? Use the interactive REPL with an OpenAI key:
 
 ```bash
 provenance chat
 ```
 
-Or use structured commands directly:
+Or structured commands:
 
 ```bash
 provenance people add "Sarah Chen" --role "Director of AI" --org "Penn Medicine"
@@ -50,7 +63,7 @@ provenance meetings add --title "Intro with Sarah" --date 2026-03-10 --attendees
 provenance ask "what do I know about Sarah?"
 ```
 
-See [REPL](repl.md) for the full guide.
+See [REPL](repl.md) and [Setup](setup.md) for configuration.
 
 ---
 
