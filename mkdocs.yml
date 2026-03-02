@@ -40,9 +40,9 @@ nav:
   - Home: index.md
   - Setup: setup.md
   - Onboarding: onboarding.md
-  - REPL: repl.md
   - Claude Desktop (MCP): mcp.md
   - Calendar: calendar.md
+  - REPL: repl.md
   - Commands:
     - People: commands/people.md
     - Meetings: commands/meetings.md

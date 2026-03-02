@@ -2,7 +2,7 @@
 
 **Local-first personal CRM and memory tool for professional use.**
 
-Track people, meetings, notes, and action items. Surface context on demand through an AI-assisted REPL, a structured CLI, or directly from Claude Desktop via MCP.
+Track people, meetings, notes, and action items. Surface context on demand through Claude Desktop, an interactive REPL, or a structured CLI.
 
 Runs entirely on your machine. No accounts, no cloud sync.
 
@@ -12,34 +12,45 @@ Runs entirely on your machine. No accounts, no cloud sync.
 
 ```bash
 uv tool install git+https://github.com/shawnzam/provenance
-```
-
-Then initialize your data directory:
-
-```bash
 provenance init
 ```
 
-Set up `~/.provenance/.env` with your API key (see [Setup](setup.md)), then verify:
-
-```bash
-provenance doctor
-```
+See [Setup](setup.md) for configuration details.
 
 ---
 
-## Quick start
+## Two ways to use it
+
+### Claude Desktop (recommended — no OpenAI key required)
+
+Connect Provenance to Claude Desktop via MCP. Use Claude as your interface — ask questions, log meetings, search your notes — all through a conversation.
+
+```
+What meetings do I have this week?
+Prep me for my 2pm with Erik
+Add an action item to follow up with Roger by Friday
+What did we discuss about AI governance last month?
+```
+
+Claude handles the natural language. Provenance handles the data. See [Claude Desktop](mcp.md).
+
+### Standalone CLI + REPL
+
+Use Provenance on its own with an OpenAI key. The interactive REPL is the primary standalone interface:
 
 ```bash
-# Launch the interactive REPL — the main interface
 provenance chat
+```
 
-# Or use the structured CLI directly
+Or use structured commands directly:
+
+```bash
 provenance people add "Sarah Chen" --role "Director of AI" --org "Penn Medicine"
 provenance meetings add --title "Intro with Sarah" --date 2026-03-10 --attendees sarah-chen
-provenance actions add "Send Sarah the AI governance framework" --due 2026-03-15
 provenance ask "what do I know about Sarah?"
 ```
+
+See [REPL](repl.md) for the full guide.
 
 ---
 
@@ -49,8 +60,8 @@ provenance ask "what do I know about Sarah?"
 ┌─────────────────────────────────────────────────────┐
 │  User Interfaces                                    │
 │                                                     │
-│  provenance chat    provenance <cmd>   Claude       │
-│  (REPL)             (structured CLI)  Desktop (MCP) │
+│  Claude Desktop (MCP)   provenance chat   CLI cmds  │
+│  ← no OpenAI needed     ← needs OpenAI             │
 └──────────┬────────────────┬──────────────┬──────────┘
            │                │              │
            └────────────────┼──────────────┘
@@ -79,8 +90,8 @@ All data lives in `~/.provenance/`. The code repo contains no personal data.
 
 **Piping** — every command has `--json` output. Chain with `|` and feed into `provenance ai` for on-demand synthesis.
 
-**REPL** — the primary interface. Type questions naturally, use prefix shorthands (`@name`, `#meeting`, `+action`), or issue slash commands (`/recap`, `/focus`). See [REPL](repl.md).
+**MCP** — Provenance exposes all tools to Claude Desktop over stdio. No network, no auth, no OpenAI key needed. See [Claude Desktop](mcp.md).
 
-**MCP** — Provenance exposes all tools to Claude Desktop over stdio. No network, no auth. See [Claude Desktop](mcp.md).
+**REPL** — standalone interactive interface powered by OpenAI. Type questions naturally, use prefix shorthands (`@name`, `#meeting`, `+action`), or issue slash commands (`/recap`, `/focus`). See [REPL](repl.md).
 
 **`--check-text` / `-ct`** — proofread any free-text argument before it's saved: `provenance -ct people add "Tom Sevr" --context "Met hom last week"`.

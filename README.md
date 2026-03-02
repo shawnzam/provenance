@@ -1,6 +1,6 @@
 # Provenance
 
-A local-first personal CRM and memory tool for professional use. Track people, meetings, notes, and action items. Surface context on demand through an AI-assisted REPL, a structured CLI, or directly from Claude Desktop via MCP.
+A local-first personal CRM and memory tool for professional use. Track people, meetings, notes, and action items. Surface context on demand through Claude Desktop, an interactive REPL, or a structured CLI.
 
 Runs entirely on your machine. No accounts, no cloud sync.
 
@@ -13,14 +13,54 @@ uv tool install git+https://github.com/shawnzam/provenance
 provenance init
 ```
 
-Set up `~/.provenance/.env` with your OpenAI API key, then:
+Configure `~/.provenance/.env` (see [Setup](https://shawnzam.github.io/provenance/setup/)), then:
 
 ```bash
 provenance doctor
-provenance chat
 ```
 
+**No OpenAI key needed** if you use Claude Desktop — see [Claude Desktop setup](https://shawnzam.github.io/provenance/mcp/).
+
 **[Full documentation →](https://shawnzam.github.io/provenance/)**
+
+---
+
+## Claude Desktop quick start
+
+**1. Install and initialize**
+
+```bash
+uv tool install git+https://github.com/shawnzam/provenance
+provenance init
+```
+
+**2. Add to `~/Library/Application Support/Claude/claude_desktop_config.json`**
+
+```json
+{
+  "mcpServers": {
+    "provenance": {
+      "command": "/Users/yourname/.local/bin/uv",
+      "args": ["--directory", "/path/to/provenance", "run", "python", "mcp_server.py"]
+    }
+  }
+}
+```
+
+Replace `/Users/yourname/.local/bin/uv` with `$(which uv)` and `/path/to/provenance` with the path to your clone.
+
+**3. Restart Claude Desktop**
+
+You'll see a hammer icon in the input bar confirming Provenance is connected. Then just ask:
+
+```
+What meetings do I have this week?
+Prep me for my call with Erik
+Add an action item to follow up with Sarah by Friday
+Search my notes for anything about AI governance
+```
+
+No OpenAI key needed. Claude handles the AI — Provenance handles your data.
 
 ---
 
@@ -47,9 +87,9 @@ provenance people tom-sever meetings --json \
 |---|---|
 | Python 3.11+ | Managed by `uv` |
 | [`uv`](https://docs.astral.sh/uv/getting-started/installation/) | Package manager |
-| OpenAI API key | For AI features |
+| [Claude Desktop](https://claude.ai/download) | Optional — use as your AI interface (no OpenAI key needed) |
+| OpenAI API key | Optional — only for the standalone REPL and `ask`/`ai` commands |
 | [`icalBuddy`](https://hasseg.org/icalBuddy/) | Optional — macOS calendar access |
-| Claude Desktop | Optional — MCP integration |
 
 ---
 

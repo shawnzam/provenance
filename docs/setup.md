@@ -6,9 +6,9 @@
 |---|---|
 | Python 3.11+ | Managed by `uv` — you don't need to install it separately |
 | [`uv`](https://docs.astral.sh/uv/getting-started/installation/) | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
-| OpenAI API key | For AI completions, autocorrect, and proofreading |
+| [Claude Desktop](https://claude.ai/download) | Optional — MCP integration (no OpenAI key needed) |
+| OpenAI API key | Optional — only needed for the standalone REPL and `ask`/`ai` commands |
 | [`icalBuddy`](https://hasseg.org/icalBuddy/) | Optional — macOS only, for Outlook/Exchange calendar access |
-| Claude Desktop | Optional — for MCP integration |
 
 ---
 
@@ -73,21 +73,16 @@ cp /path/to/provenance/.env.example ~/.provenance/.env
 Or create it directly:
 
 ```ini title="~/.provenance/.env"
-# Required for AI features
-PROVENANCE_OPENAI_API_KEY=sk-...
-
-# AI provider — "openai" is the only built-in provider
-PROVENANCE_AI_PROVIDER=openai
-
-# Model for provenance ai, provenance ask, and the REPL agent
-PROVENANCE_AI_MODEL=gpt-4o
-
-# Optional: faster/cheaper model for --check-text proofreading
-PROVENANCE_PROOFREAD_AI_MODEL=gpt-4o-mini
-
-# Django internals — generate any long random string
+# Django internals — generate any long random string (required)
 DJANGO_SECRET_KEY=change-me-to-a-long-random-string
 DJANGO_DEBUG=True
+
+# OpenAI — only needed for the standalone REPL, provenance ask, and provenance ai
+# Not required if you use Claude Desktop (MCP)
+PROVENANCE_OPENAI_API_KEY=sk-...
+PROVENANCE_AI_PROVIDER=openai
+PROVENANCE_AI_MODEL=gpt-4o
+PROVENANCE_PROOFREAD_AI_MODEL=gpt-4o-mini   # optional, defaults to PROVENANCE_AI_MODEL
 ```
 
 ---
