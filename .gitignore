@@ -1,0 +1,23 @@
+# Personal data lives in ~/.provenance — not in the repo
+notes/
+data/
+.env
+*.env
+
+# MkDocs build output
+site/
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+dist/
+*.egg-info/
+.pytest_cache/
+
+# Claude Code session data
+.claude/

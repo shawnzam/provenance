@@ -1,0 +1,57 @@
+site_name: Provenance
+site_description: Local-first personal CRM and memory tool
+site_url: https://shawnzam.github.io/provenance/
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Setup: setup.md
+  - Onboarding: onboarding.md
+  - REPL: repl.md
+  - Claude Desktop (MCP): mcp.md
+  - Calendar: calendar.md
+  - Commands:
+    - People: commands/people.md
+    - Meetings: commands/meetings.md
+    - Actions: commands/actions.md
+    - Documents: commands/docs.md
+    - Reading list: commands/reading.md
+    - Search: commands/search.md
+    - AI: commands/ai.md
+  - Reference:
+    - Data Models: reference/models.md
+    - Dependencies: reference/dependencies.md
+  - Development: development.md
