@@ -217,6 +217,29 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "add_person",
+            "description": (
+                "Add a new person to the CRM. Use when the user mentions someone who isn't already tracked. "
+                "Search first with search_people to avoid duplicates."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "Full name"},
+                    "role": {"type": "string", "description": "Job title or role"},
+                    "org": {"type": "string", "description": "Organization or department"},
+                    "email": {"type": "string", "description": "Email address"},
+                    "relationship_context": {"type": "string", "description": "How you know them / relevant context"},
+                    "notes": {"type": "string", "description": "Additional notes"},
+                    "tags": {"type": "string", "description": "Comma-separated tags"},
+                },
+                "required": ["name"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "update_person",
             "description": (
                 "Update an existing person's details — role, org, email, notes, or relationship context. "
@@ -790,6 +813,35 @@ def write_note_file(filename: str, content: str) -> str:
     return f"Saved notes/{safe_name} ({len(content)} chars)"
 
 
+def add_person(
+    name: str,
+    role: str = "",
+    org: str = "",
+    email: str = "",
+    relationship_context: str = "",
+    notes: str = "",
+    tags: str = "",
+) -> str:
+    from core.models import Person
+    from slugify import slugify as _slugify
+
+    slug = _slugify(name)
+    if Person.objects.filter(slug=slug).exists():
+        return f"'{name}' already exists (slug: {slug}). Use update_person to modify them."
+
+    p = Person.objects.create(
+        name=name,
+        slug=slug,
+        role=role,
+        org=org,
+        email=email,
+        relationship_context=relationship_context,
+        notes=notes,
+        tags=tags,
+    )
+    return f"Added {p.name} ({p.slug})" + (f" — {p.role} at {p.org}" if p.role or p.org else "")
+
+
 def update_person(
     slug: str,
     role: str | None = None,
@@ -1086,6 +1138,7 @@ TOOL_FN = {
     "get_calendar_events": get_calendar_events,
     "add_action": add_action,
     "update_action": update_action,
+    "add_person": add_person,
     "update_person": update_person,
     "append_to_meeting_notes": append_to_meeting_notes,
     "write_note_file": write_note_file,
