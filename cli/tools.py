@@ -981,8 +981,8 @@ def update_reading_item(
     return f"Updated '{item.title or slug}': {', '.join(changes)}"
 
 
-# Default calendars to query — work-relevant, excludes Family/Holidays/etc.
-_WORK_CALENDARS = ["Calendar", "Shawn Zamechek", "Office Hours"]
+# Default calendars to query
+_WORK_CALENDARS = ["Calendar", "Shawn Zamechek", "Office Hours", "Family"]
 
 
 def get_calendar_events(
