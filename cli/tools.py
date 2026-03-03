@@ -217,6 +217,40 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "update_meeting",
+            "description": (
+                "Update a meeting's details or attendees. Use search_meetings first to find the slug. "
+                "To add/remove individual attendees use add_attendees/remove_attendees. "
+                "To replace the full attendee list use set_attendees. "
+                "People are matched by name or slug."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "slug": {"type": "string", "description": "Meeting slug (from search_meetings)"},
+                    "title": {"type": "string", "description": "New meeting title"},
+                    "date": {"type": "string", "description": "New date (YYYY-MM-DD)"},
+                    "summary": {"type": "string", "description": "New or updated summary"},
+                    "add_attendees": {
+                        "type": "array", "items": {"type": "string"},
+                        "description": "Names to add to attendees (without removing existing ones)",
+                    },
+                    "remove_attendees": {
+                        "type": "array", "items": {"type": "string"},
+                        "description": "Names to remove from attendees",
+                    },
+                    "set_attendees": {
+                        "type": "array", "items": {"type": "string"},
+                        "description": "Replace the full attendee list with these names",
+                    },
+                },
+                "required": ["slug"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "add_person",
             "description": (
                 "Add a new person to the CRM. Use when the user mentions someone who isn't already tracked. "
@@ -842,6 +876,89 @@ def add_person(
     return f"Added {p.name} ({p.slug})" + (f" — {p.role} at {p.org}" if p.role or p.org else "")
 
 
+def update_meeting(
+    slug: str,
+    title: str | None = None,
+    date: str | None = None,
+    summary: str | None = None,
+    add_attendees: list[str] | None = None,
+    remove_attendees: list[str] | None = None,
+    set_attendees: list[str] | None = None,
+) -> str:
+    from core.models import Meeting, Person
+    from slugify import slugify as _slugify
+
+    try:
+        m = Meeting.objects.get(slug=slug)
+    except Meeting.DoesNotExist:
+        return f"No meeting with slug '{slug}'. Use search_meetings to find the right slug."
+
+    changed = []
+
+    if title is not None:
+        m.title = title
+        changed.append("title")
+    if date is not None:
+        from datetime import date as _date
+        try:
+            m.date = _date.fromisoformat(date)
+            changed.append("date")
+        except ValueError:
+            return f"Invalid date '{date}'. Use YYYY-MM-DD."
+    if summary is not None:
+        m.summary = summary
+        changed.append("summary")
+
+    if changed:
+        m.save()
+
+    def _resolve_people(names: list[str]) -> tuple[list, list]:
+        found, missing = [], []
+        for name in names:
+            slug_guess = _slugify(name)
+            p = (Person.objects.filter(slug=slug_guess).first()
+                 or Person.objects.filter(name__iexact=name).first()
+                 or Person.objects.filter(slug__icontains=slug_guess).first())
+            if p:
+                found.append(p)
+            else:
+                missing.append(name)
+        return found, missing
+
+    warnings = []
+
+    if set_attendees is not None:
+        people, missing = _resolve_people(set_attendees)
+        m.attendees.set(people)
+        changed.append(f"attendees → {[p.slug for p in people]}")
+        if missing:
+            warnings.append(f"not found: {missing}")
+
+    else:
+        if add_attendees:
+            people, missing = _resolve_people(add_attendees)
+            m.attendees.add(*people)
+            changed.append(f"added {[p.slug for p in people]}")
+            if missing:
+                warnings.append(f"not found (skipped): {missing}")
+
+        if remove_attendees:
+            people, missing = _resolve_people(remove_attendees)
+            m.attendees.remove(*people)
+            changed.append(f"removed {[p.slug for p in people]}")
+            if missing:
+                warnings.append(f"not found: {missing}")
+
+    if not changed:
+        return f"{m.title}: nothing to update."
+
+    current = [p.slug for p in m.attendees.all()]
+    result = f"Updated '{m.title}' ({m.slug}): {', '.join(str(c) for c in changed)}. Attendees now: {current}"
+    if warnings:
+        result += f". Warnings: {'; '.join(warnings)}"
+    return result
+
+
 def update_person(
     slug: str,
     role: str | None = None,
@@ -1139,6 +1256,7 @@ TOOL_FN = {
     "add_action": add_action,
     "update_action": update_action,
     "add_person": add_person,
+    "update_meeting": update_meeting,
     "update_person": update_person,
     "append_to_meeting_notes": append_to_meeting_notes,
     "write_note_file": write_note_file,

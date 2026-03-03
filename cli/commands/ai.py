@@ -164,6 +164,16 @@ def _tool_label(name: str, arguments: dict) -> str:
     if name == "write_note_file":
         return f"provenance note write {a.get('filename', '')}"
 
+    if name == "update_meeting":
+        parts = [f"provenance meetings update {a.get('slug', '')}"]
+        if a.get("add_attendees"):
+            parts.append(f"# add: {', '.join(a['add_attendees'])}")
+        if a.get("remove_attendees"):
+            parts.append(f"# remove: {', '.join(a['remove_attendees'])}")
+        if a.get("set_attendees"):
+            parts.append(f"# set attendees: {', '.join(a['set_attendees'])}")
+        return " ".join(parts)
+
     if name == "add_person":
         parts = [f"provenance people add \"{a.get('name', '')}\""]
         if a.get('role'):
