@@ -40,6 +40,8 @@ Search my notes for anything about the ISO working group
 
 ## Available tools
 
+### Read
+
 | Tool | Description |
 |---|---|
 | `search_meetings` | Search meetings by date, person, or keyword |
@@ -47,17 +49,38 @@ Search my notes for anything about the ISO working group
 | `search_people` | Look up people by name, role, or org |
 | `search_actions` | Search action items by status or keyword |
 | `search_notes` | Full-text and semantic search across all notes |
-| `get_calendar_events` | Read today's or this week's calendar (requires icalBuddy) |
-| `add_meeting` | Create a meeting record and notes file |
-| `add_action` | Create an action item |
-| `update_person` | Update a person's fields |
-| `append_to_meeting_notes` | Add content to an existing meeting's notes file |
-| `write_note_file` | Create or overwrite a freeform notes file |
-| `delete_meeting` | Delete a meeting and its notes file |
-| `add_reading_item` | Add a URL to your reading list |
+| `search_documents` | Search imported documents |
+| `get_document` | Read an imported document |
 | `search_reading_list` | Search your reading list |
-| `update_reading_item` | Mark a reading item as read, update notes, etc. |
+| `get_calendar_events` | Read calendar events (requires icalBuddy) |
+| `get_today` | Get today's date |
+
+### Write
+
+| Tool | Description |
+|---|---|
+| `add_person` | Add a new person to the CRM |
+| `update_person` | Update a person's role, org, email, or notes |
+| `add_meeting` | Create a meeting record and notes file |
+| `update_meeting` | Update a meeting's title, date, summary, or attendees |
+| `append_to_meeting_notes` | Append content to a meeting's notes file |
+| `delete_meeting` | Delete a meeting and its notes file |
+| `add_action` | Create an action item |
+| `update_action` | Update an action item's status or due date |
+| `add_reading_item` | Add a URL to your reading list |
+| `update_reading_item` | Mark a reading item read, update notes or tags |
+| `write_note_file` | Create or overwrite a freeform notes file |
 | `update_user_context` | Append or replace `context.md` |
+
+### `update_meeting` — attendee options
+
+| Parameter | Behaviour |
+|---|---|
+| `add_attendees: ["name"]` | Add people without touching existing attendees |
+| `remove_attendees: ["name"]` | Remove specific people |
+| `set_attendees: ["name", ...]` | Replace the full attendee list |
+
+People are matched by name or slug. Unrecognised names are skipped with a warning.
 
 ---
 
