@@ -18,13 +18,13 @@ Reads context from stdin, combines it with your instruction, and calls the AI. I
 
 ```bash
 # Summarise a person's meetings
-provenance people tom-sever meetings --json | provenance ai "write a short bio before our next meeting"
+provenance people alex-rivera meetings --json | provenance ai "write a short bio before our next meeting"
 
 # Prioritise open actions
 provenance actions list --status open --json | provenance ai "prioritize these and suggest what to do this week"
 
 # Chain multiple sources
-{ provenance people tom-sever --json; provenance people tom-sever meetings --json; } | \
+{ provenance people alex-rivera --json; provenance people alex-rivera meetings --json; } | \
   provenance ai "draft a prep briefing for my next meeting with Tom"
 ```
 
@@ -51,7 +51,7 @@ provenance ask "what were my concerns about the new role?"
 provenance ask "who should I follow up with?" --verbose
 
 # DB only (skip notes search)
-provenance ask "who have I met from Wharton?" --no-notes
+provenance ask "who have I met from Acme Corp?" --no-notes
 ```
 
 ### Options
@@ -98,11 +98,11 @@ Prints the corrected text to stdout. Useful before sending an email or document.
 Global flag available on all commands that proofread free-text arguments via AI before saving.
 
 ```bash
-provenance -ct people add "Tom Sever" --context "Met hom at a Wharton evnt in Januray"
+provenance -ct people add "Alex Rivera" --context "Met hom at the offsite evnt in Januray"
 
 # stderr:
-#   ~ 'Met hom at a Wharton evnt in Januray'
-#   ✓ 'Met him at a Wharton event in January'
+#   ~ 'Met hom at the offsite evnt in Januray'
+#   ✓ 'Met him at the offsite event in January'
 ```
 
 Uses `PROVENANCE_PROOFREAD_AI_MODEL` (falls back to `PROVENANCE_AI_MODEL`). Set it to a fast model like `gpt-4o-mini` to keep latency low.

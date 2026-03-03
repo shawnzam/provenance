@@ -148,8 +148,8 @@ PROVENANCE_AI_PROVIDER=myprovider
 `cli/arg_normalizer.py` rewrites `sys.argv` before Typer processes it:
 
 - **`--check-text` / `-ct`** — strips the flag and sets a global enable state; `ai/text_checker.py` is called inside each command on prose fields
-- **Slug shorthand** — `provenance people tom-sever` → `provenance people show tom-sever`; `provenance people tom-sever meetings` → `provenance people meetings tom-sever`
-- **Natural language fallback** — `provenance who is Tom Sever?` (2+ words, no flags) → `provenance ask who is Tom Sever?`
+- **Slug shorthand** — `provenance people alex-rivera` → `provenance people show alex-rivera`; `provenance people alex-rivera meetings` → `provenance people meetings alex-rivera`
+- **Natural language fallback** — `provenance who is Alex Rivera?` (2+ words, no flags) → `provenance ask who is Alex Rivera?`
 
 ---
 

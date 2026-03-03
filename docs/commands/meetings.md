@@ -14,7 +14,7 @@ List meetings, with optional filters.
 
 ```bash
 provenance meetings list
-provenance meetings list --person tom-sever
+provenance meetings list --person alex-rivera
 provenance meetings list --after 2026-03-01
 provenance meetings list --before 2026-04-01 --json
 ```
@@ -33,8 +33,8 @@ provenance meetings list --before 2026-04-01 --json
 Add a meeting and create a blank Markdown notes file.
 
 ```bash
-provenance meetings add --title "Intro with Tom" --date 2026-03-10 --attendees tom-sever
-provenance meetings add --title "Team standup" --date 2026-03-11 --attendees "tom-sever,jane-doe" --summary "Sprint planning"
+provenance meetings add --title "Intro with Alex" --date 2026-03-10 --attendees alex-rivera
+provenance meetings add --title "Team standup" --date 2026-03-11 --attendees "alex-rivera,jordan-lee" --summary "Sprint planning"
 ```
 
 | Flag | Short | Description |
@@ -49,10 +49,10 @@ provenance meetings add --title "Team standup" --date 2026-03-11 --attendees "to
 After running `add`, a Markdown file is created at `notes/meetings/<slug>.md` with a template:
 
 ```markdown
-# Intro with Tom
+# Intro with Alex
 
 **Date:** 2026-03-10
-**Attendees:** Tom Sever
+**Attendees:** Alex Rivera
 
 ## Notes
 
@@ -61,7 +61,7 @@ After running `add`, a Markdown file is created at `notes/meetings/<slug>.md` wi
 
 ```
 
-Open it in your editor to fill in meeting notes. The file is picked up by `provenance search` and indexed by `ck`.
+Open it in your editor to fill in meeting notes. The file is picked up by `provenance search` automatically.
 
 !!! info "Auto-indexing"
     The search index is updated automatically in the background after each `meetings add`.
@@ -73,8 +73,8 @@ Open it in your editor to fill in meeting notes. The file is picked up by `prove
 Show full details for a meeting, including the contents of its notes file.
 
 ```bash
-provenance meetings show 2026-03-10-intro-with-tom
-provenance meetings show 2026-03-10-intro-with-tom --json
+provenance meetings show 2026-03-10-intro-with-alex
+provenance meetings show 2026-03-10-intro-with-alex --json
 ```
 
 | Argument | Description |

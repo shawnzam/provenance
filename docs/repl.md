@@ -16,8 +16,8 @@ Just type. Unknown input is automatically sent to the AI agent, which searches y
 
 ```
 P 9:15 ❯ who am I meeting with this week?
-P 9:15 ❯ prep me for my Erik Santoro call
-P 9:15 ❯ what did I learn from the ISO team last month?
+P 9:15 ❯ prep me for my Alex Rivera call
+P 9:15 ❯ what did I learn from the vendor team last month?
 P 9:15 ❯ summarize my open action items
 ```
 
@@ -28,8 +28,8 @@ P 9:15 ❯ summarize my open action items
 | Prefix | Action | Example |
 |---|---|---|
 | `@name` | Look up a person | `@roger` |
-| `#title` | Create a meeting | `#standup with ISO team` |
-| `+task` | Add an action item | `+send Amy the deck by Friday` |
+| `#title` | Create a meeting | `#standup with the team` |
+| `+task` | Add an action item | `+send Jordan the deck by Friday` |
 | `!text` | Proofread | `!this sentance has erors` |
 
 ---

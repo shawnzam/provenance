@@ -15,7 +15,7 @@ List action items, with optional filters.
 ```bash
 provenance actions list
 provenance actions list --status open
-provenance actions list --person tom-sever --json
+provenance actions list --person alex-rivera --json
 ```
 
 | Flag | Short | Description |
@@ -33,9 +33,9 @@ Status values are colour-coded in the terminal: yellow = open, blue = in_progres
 Add a new action item.
 
 ```bash
-provenance actions add "Send Tom the AI governance framework"
-provenance actions add "Review slides" --due 2026-03-15 --person tom-sever
-provenance actions add "Book venue" --meeting 2026-03-10-intro-with-tom --due 2026-03-12
+provenance actions add "Send Alex the AI governance framework"
+provenance actions add "Review slides" --due 2026-03-15 --person alex-rivera
+provenance actions add "Book venue" --meeting 2026-03-10-intro-with-alex --due 2026-03-12
 ```
 
 | Argument / Flag | Short | Description |

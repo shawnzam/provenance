@@ -15,9 +15,9 @@ provenance chat
 ```
 
 ```
-P ❯ remember I am the Senior IT Director, Innovation & AI at Wharton
-P ❯ remember my team is Roger, Will, Yemi, and John
-P ❯ remember I report to Alec Lamon
+P ❯ remember I am the Head of Technology at Acme Corp
+P ❯ remember my team is Jamie, Sam, Jordan, and Casey
+P ❯ remember I report to my VP
 P ❯ remember my top priority this quarter is the AI governance framework
 ```
 
@@ -27,17 +27,17 @@ Or write it directly — it's plain Markdown, no special format required:
 # Personal Context
 
 ## Identity
-I am Shawn Zamechek, Senior IT Director, Innovation & AI at Wharton School, UPenn.
+I am [your name], Head of Technology at Acme Corp.
 
 ## My Team
-- Roger Chu — engineering lead
-- Will Haun — AI projects
-- Yemi Afolabi — operations
-- John Piotrowski — infrastructure
+- Jamie — engineering lead
+- Sam — AI projects
+- Jordan — operations
+- Casey — infrastructure
 
 ## Current Priorities
 - AI governance framework (Q1 deadline)
-- Wharton AI CoE launch
+- Innovation team launch
 ```
 
 The AI re-reads `context.md` on every request, so edits take effect immediately.
@@ -51,13 +51,13 @@ The AI re-reads `context.md` on every request, so edits take effect immediately.
 Describe someone naturally — AI extracts the details:
 
 ```bash
-provenance note met with Sarah Chen from the AI CoE today, she leads responsible AI policy
+provenance note met with Jordan Lee from the innovation team today, she leads responsible AI policy
 ```
 
 Or in the REPL:
 
 ```
-P ❯ note that I had a call with David Kim, CTO at Penn Medicine, exploring AI collaboration
+P ❯ note that I had a call with Marcus Webb, CTO at Riverside Health, exploring AI collaboration
 ```
 
 ### Structured
@@ -65,10 +65,10 @@ P ❯ note that I had a call with David Kim, CTO at Penn Medicine, exploring AI 
 When you know the fields:
 
 ```bash
-provenance people add "Tom Sever" \
-  --role "Professor of Marketing" \
-  --org "Wharton" \
-  --context "Faculty sponsor for CARGO project"
+provenance people add "Alex Rivera" \
+  --role "VP of Engineering" \
+  --org "Acme Corp" \
+  --context "leads the Orion project"
 ```
 
 ### From a document
@@ -100,13 +100,13 @@ Go to [http://localhost:8000/admin/](http://localhost:8000/admin/) → People.
 
 ```bash
 # Freeform — AI extracts title, date, and attendees
-provenance meetings add just wrapped up an intro call with Tom Sever and David Brubaker
+provenance meetings add just wrapped up an intro call with Alex Rivera and Sam Torres
 
 # Structured
 provenance meetings add \
-  --title "Intro with Tom Sever" \
+  --title "Intro with Alex Rivera" \
   --date 2026-03-10 \
-  --attendees tom-sever
+  --attendees alex-rivera
 ```
 
 Each meeting creates a Markdown file in `~/.provenance/notes/meetings/`. Open it in your editor and write as much or as little as you want. Provenance indexes it automatically.

@@ -55,7 +55,7 @@ You'll see a hammer icon in the input bar confirming Provenance is connected. Th
 
 ```
 What meetings do I have this week?
-Prep me for my call with Erik
+Prep me for my call with Alex
 Add an action item to follow up with Sarah by Friday
 Search my notes for anything about AI governance
 ```
@@ -68,14 +68,14 @@ No OpenAI key needed. Claude handles the AI — Provenance handles your data.
 
 ```bash
 provenance chat                          # interactive REPL (primary interface)
-provenance ask "who is Tom Sever?"       # natural language query
+provenance ask "who is Alex Rivera?"     # natural language query
 provenance people list
 provenance meetings list --after 2026-03-01
 provenance actions list --status open
 provenance search "AI governance"
 
 # Pipe to AI
-provenance people tom-sever meetings --json \
+provenance people alex-rivera meetings --json \
   | provenance ai "write a short briefing before our next call"
 ```
 

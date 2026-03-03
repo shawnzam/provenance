@@ -29,11 +29,11 @@ Restart Claude Desktop. You'll see a hammer icon in the input bar — click it t
 
 ```
 What meetings do I have this week?
-Prep me for my 2pm with Erik
-Add an action item to follow up with Roger by Friday
+Prep me for my 2pm with Alex
+Add an action item to follow up with Jamie by Friday
 What did we discuss about AI governance last month?
 Who on my team should own the vendor evaluation?
-Search my notes for anything about the ISO working group
+Search my notes for anything about the vendor evaluation
 ```
 
 ---

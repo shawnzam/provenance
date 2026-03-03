@@ -24,14 +24,14 @@ Represents someone in your network.
 **`to_dict()` output:**
 ```json
 {
-  "slug": "tom-sever",
-  "name": "Tom Sever",
-  "role": "Professor of Marketing",
-  "org": "Wharton",
-  "email": "tsever@wharton.upenn.edu",
-  "relationship_context": "Met at orientation",
+  "slug": "alex-rivera",
+  "name": "Alex Rivera",
+  "role": "VP of Engineering",
+  "org": "Acme Corp",
+  "email": "alex@acme.com",
+  "relationship_context": "Met at the onboarding session",
   "notes": "",
-  "tags": ["wharton", "faculty"]
+  "tags": ["partner", "engineering"]
 }
 ```
 
@@ -56,12 +56,12 @@ Notes files are stored at `notes/meetings/<slug>.md` and created automatically b
 **`to_dict()` output:**
 ```json
 {
-  "slug": "2026-03-10-intro-with-tom",
-  "title": "Intro with Tom",
+  "slug": "2026-03-10-intro-with-alex",
+  "title": "Intro with Alex",
   "date": "2026-03-10",
-  "attendees": [{"slug": "tom-sever", "name": "Tom Sever"}],
+  "attendees": [{"slug": "alex-rivera", "name": "Alex Rivera"}],
   "summary": "",
-  "notes_file": "notes/meetings/2026-03-10-intro-with-tom.md",
+  "notes_file": "notes/meetings/2026-03-10-intro-with-alex.md",
   "tags": []
 }
 ```
@@ -104,8 +104,8 @@ A reference document imported into `notes/docs/`.
 
 All slugs are generated using [python-slugify](https://github.com/un33k/python-slugify):
 
-- `"Tom Sever"` → `tom-sever`
-- `"2026-03-10 Intro with Tom"` → `2026-03-10-intro-with-tom`
+- `"Alex Rivera"` → `alex-rivera`
+- `"2026-03-10 Intro with Alex"` → `2026-03-10-intro-with-alex`
 - `"AI Ethics & Governance"` → `ai-ethics-governance`
 
 Slugs are unique per model type. If a collision occurs, an error is raised with guidance.

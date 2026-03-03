@@ -17,7 +17,7 @@ Searches both the SQLite database (people, meetings, actions, documents) and you
 provenance search "AI governance"
 
 # Pipe results to AI
-provenance search "Wharton faculty" | provenance ai "who should I reach out to first?"
+provenance search "partner contacts" | provenance ai "who should I reach out to first?"
 ```
 
 ---

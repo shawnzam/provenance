@@ -28,10 +28,10 @@ provenance people list --json
 Add a new person, or update an existing one if the slug already exists.
 
 ```bash
-provenance people add "Tom Sever"
-provenance people add "Tom Sever" --role "Professor of Marketing" --org "Wharton"
-provenance people add "Tom Sever" --email "tsever@wharton.upenn.edu" --context "Met at orientation"
-provenance people add "Tom Sever" --role "Professor" --update   # skip confirmation prompt
+provenance people add "Alex Rivera"
+provenance people add "Alex Rivera" --role "VP of Engineering" --org "Acme Corp"
+provenance people add "Alex Rivera" --email "alex@acme.com" --context "Met at onboarding"
+provenance people add "Alex Rivera" --role "VP of Engineering" --update   # skip confirmation prompt
 ```
 
 | Argument / Flag | Short | Description |
@@ -51,7 +51,7 @@ If a person with the same slug already exists, you'll be shown their current det
 !!! tip "Proofread on the way in"
     Add `-ct` to proofread prose fields before saving:
     ```bash
-    provenance -ct people add "Tom Sevr" --role "Profsor of Markting"
+    provenance -ct people add "Alex Rivra" --role "VP of Engneering"
     ```
 
 ---
@@ -61,9 +61,9 @@ If a person with the same slug already exists, you'll be shown their current det
 Show full details for a person.
 
 ```bash
-provenance people show tom-sever
-provenance people tom-sever           # shorthand
-provenance people tom-sever --json
+provenance people show alex-rivera
+provenance people alex-rivera           # shorthand
+provenance people alex-rivera --json
 ```
 
 | Argument | Description |
@@ -78,9 +78,9 @@ provenance people tom-sever --json
 List all meetings for a person.
 
 ```bash
-provenance people meetings tom-sever
-provenance people tom-sever meetings          # shorthand
-provenance people tom-sever meetings --json
+provenance people meetings alex-rivera
+provenance people alex-rivera meetings          # shorthand
+provenance people alex-rivera meetings --json
 ```
 
 | Argument | Description |
@@ -91,5 +91,5 @@ provenance people tom-sever meetings --json
 The `--json` output is designed for piping:
 
 ```bash
-provenance people tom-sever meetings --json | provenance ai "write a short bio before our next meeting"
+provenance people alex-rivera meetings --json | provenance ai "write a short bio before our next meeting"
 ```

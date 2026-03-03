@@ -38,8 +38,8 @@ Replace `/Users/yourname/.local/bin/uv` with `$(which uv)` and `/path/to/provena
 
 ```
 What meetings do I have this week?
-Prep me for my 2pm with Erik
-Add an action item to follow up with Roger by Friday
+Prep me for my 2pm with Alex
+Add an action item to follow up with Jamie by Friday
 What did we discuss about AI governance last month?
 ```
 
@@ -58,9 +58,9 @@ provenance chat
 Or structured commands:
 
 ```bash
-provenance people add "Sarah Chen" --role "Director of AI" --org "Penn Medicine"
-provenance meetings add --title "Intro with Sarah" --date 2026-03-10 --attendees sarah-chen
-provenance ask "what do I know about Sarah?"
+provenance people add "Alex Rivera" --role "VP of Engineering" --org "Acme Corp"
+provenance meetings add --title "Intro with Alex" --date 2026-03-10 --attendees alex-rivera
+provenance ask "what do I know about Alex?"
 ```
 
 See [REPL](repl.md) and [Setup](setup.md) for configuration.
@@ -99,7 +99,7 @@ All data lives in `~/.provenance/`. The code repo contains no personal data.
 
 ## Key concepts
 
-**Slugs** — CLI-friendly IDs auto-generated from names. `"Sarah Chen"` → `sarah-chen`. Use slugs wherever a command asks for an ID.
+**Slugs** — CLI-friendly IDs auto-generated from names. `"Alex Rivera"` → `alex-rivera`. Use slugs wherever a command asks for an ID.
 
 **Piping** — every command has `--json` output. Chain with `|` and feed into `provenance ai` for on-demand synthesis.
 

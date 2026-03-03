@@ -45,7 +45,7 @@ provenance ask "what meetings do I have this week?"
 
 ```
 What's on my calendar today?
-Prep me for my 2pm — who is Erik and what have we discussed?
+Prep me for my 2pm — who is Alex and what have we discussed?
 ```
 
 Claude uses `get_calendar_events` automatically when asked about schedule.

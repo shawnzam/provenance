@@ -25,7 +25,7 @@ Import a `.md` or `.pdf` file into `notes/docs/` and register it in the database
 
 ```bash
 provenance docs import ~/Downloads/ai-strategy.pdf
-provenance docs import ~/Documents/onboarding.md --title "Wharton Onboarding Guide" --tags "wharton,onboarding"
+provenance docs import ~/Documents/onboarding.md --title "Company Onboarding Guide" --tags "onboarding,reference"
 provenance docs import report.pdf --notes "Q1 strategy doc from the Dean's office"
 ```
 
