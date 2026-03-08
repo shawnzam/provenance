@@ -28,6 +28,7 @@
 | Tool | Install | Purpose |
 |------|---------|---------|
 | [icalBuddy](https://hasseg.org/icalBuddy/) | `brew install ical-buddy` | macOS calendar access (Outlook/Exchange) |
+| [qmd](https://github.com/tobi/qmd) | `npm install -g @tobilu/qmd` | Hybrid AI notes search — vector + BM25 + LLM reranking, all on-device |
 
 ---
 
@@ -40,7 +41,7 @@ Django's ORM gives a production-quality relational data layer with zero configur
 `import openai` appears only in `ai/openai_provider.py`. All other code uses the `AIProvider` abstract base class from `ai/base.py`. This makes swapping or adding providers (Anthropic, Ollama, local models) a one-file change.
 
 **Why FTS5 instead of a vector search library?**
-FTS5 is built into SQLite — zero additional dependencies, no binary to install, no cloud service. Porter stemming + BM25 ranking handles the vast majority of notes search queries well. True vector search (sqlite-vec) is planned for a future release.
+FTS5 is built into SQLite — zero additional dependencies, no binary to install, no cloud service. Porter stemming + BM25 ranking handles the vast majority of notes search queries well. For deeper semantic search, [qmd](https://github.com/tobi/qmd) is available as an optional backend (`--qmd` flag) — it adds vector embeddings and LLM reranking, all running locally via GGUF models.
 
 **Why separate `~/.provenance` from the code repo?**
 Personal data (notes, database, API keys) never touches the code repo. The tool can be installed from GitHub without carrying any personal information. `PROVENANCE_HOME` can be overridden to put data anywhere.

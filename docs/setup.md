@@ -9,6 +9,7 @@
 | [Claude Desktop](https://claude.ai/download) | Optional — MCP integration (no OpenAI key needed) |
 | OpenAI API key | Optional — only needed for the standalone REPL and `ask`/`ai` commands |
 | [`icalBuddy`](https://hasseg.org/icalBuddy/) | Optional — macOS only, for Outlook/Exchange calendar access |
+| [qmd](https://github.com/tobi/qmd) | Optional — hybrid AI notes search (Node.js >= 22) |
 
 ---
 
@@ -131,6 +132,22 @@ brew install ical-buddy
 Then add your Outlook account under **System Settings → Internet Accounts** (Exchange). macOS Calendar syncs it locally; Provenance reads from there — no credentials stored.
 
 See [Calendar](calendar.md) for usage.
+
+---
+
+## qmd (optional — hybrid AI search)
+
+Install [qmd](https://github.com/tobi/qmd) for vector + BM25 + LLM reranking search over your notes:
+
+```bash
+npm install -g @tobilu/qmd          # requires Node.js >= 22
+qmd collection add ~/.provenance/notes --name provenance-notes
+qmd embed                           # downloads ~2GB of models on first run
+```
+
+Once set up, use `provenance search --qmd "query"` or the `qmd` mode in the `search_notes` MCP tool. Provenance automatically re-indexes qmd whenever notes are created or updated.
+
+See [search — qmd setup](commands/search.md#qmd-setup) for details and MCP server configuration.
 
 ---
 

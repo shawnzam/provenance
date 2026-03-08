@@ -40,11 +40,19 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "get_meeting_notes",
-            "description": "Get the full notes file for a specific meeting. Use after search_meetings to get details.",
+            "description": (
+                "Get the full notes file for a specific meeting. Use after search_meetings to get details. "
+                "Wiki-links ([[slug]]) in the notes are followed automatically (up to 2 hops) unless "
+                "follow_links is set to false."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "slug": {"type": "string", "description": "Meeting slug from search_meetings"},
+                    "follow_links": {
+                        "type": "boolean",
+                        "description": "Expand [[wiki-links]] inline (default true)",
+                    },
                 },
                 "required": ["slug"],
             },
@@ -71,13 +79,46 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "get_document",
-            "description": "Read the full content of a document by its slug. Use after search_documents.",
+            "description": (
+                "Read the full content of a document by its slug. Use after search_documents. "
+                "Wiki-links ([[slug]]) in the document are followed automatically (up to 2 hops) unless "
+                "follow_links is set to false."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "slug": {"type": "string", "description": "Document slug from search_documents"},
+                    "follow_links": {
+                        "type": "boolean",
+                        "description": "Expand [[wiki-links]] inline (default true)",
+                    },
                 },
                 "required": ["slug"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_note",
+            "description": (
+                "Read a freeform note file from the notes/ directory by filename or slug. "
+                "Wiki-links ([[slug]]) in the note are followed automatically (up to 2 hops) unless "
+                "follow_links is set to false."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "filename": {
+                        "type": "string",
+                        "description": "Note filename (with or without .md extension, e.g. '2026-03-07-ideas')",
+                    },
+                    "follow_links": {
+                        "type": "boolean",
+                        "description": "Expand [[wiki-links]] inline (default true)",
+                    },
+                },
+                "required": ["filename"],
             },
         },
     },
@@ -122,6 +163,7 @@ TOOLS = [
                 "- regex: exact match — use for specific terms, names, acronyms, IDs (e.g. 'ISO', 'GPT-4', 'Colleen O Neill')\n"
                 "- lex: BM25 full-text ranking — use for topics, keywords, document-level relevance (e.g. 'budget planning', 'AI governance')\n"
                 "- semantic: conceptual/embedding search — use for fuzzy or intent-based queries (e.g. 'times I felt stressed', 'discussions about trust')\n"
+                "- qmd: hybrid AI search (vector + BM25 + LLM reranking) — best quality for complex/intent queries, slower\n"
                 "Use context_lines to pull more surrounding text when the user wants details, full notes, or deeper context (e.g. 10–20). Default is 3."
             ),
             "parameters": {
@@ -130,8 +172,8 @@ TOOLS = [
                     "query": {"type": "string", "description": "Search term or phrase"},
                     "mode": {
                         "type": "string",
-                        "enum": ["regex", "lex", "semantic"],
-                        "description": "regex for exact terms/names; lex for topics/concepts; semantic for fuzzy/intent queries",
+                        "enum": ["regex", "lex", "semantic", "qmd"],
+                        "description": "regex for exact terms/names; lex for BM25 topics/concepts; semantic for FTS5 stemming; qmd for hybrid AI search (best quality, slower)",
                     },
                     "context_lines": {
                         "type": "integer",
@@ -148,6 +190,58 @@ TOOLS = [
             "name": "get_today",
             "description": "Get today's date and day of week.",
             "parameters": {"type": "object", "properties": {}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_daily_summary",
+            "description": (
+                "Read the daily summary file for a given date (default today). "
+                "Contains timestamped log entries and any AI-generated summary blocks."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "date": {"type": "string", "description": "Date (YYYY-MM-DD, default today)"},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "log_daily",
+            "description": (
+                "Append a timestamped log entry to the daily summary file. "
+                "Use this to capture quick notes, decisions, or progress throughout the day."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "entry": {"type": "string", "description": "The log entry text"},
+                    "date": {"type": "string", "description": "Date (YYYY-MM-DD, default today)"},
+                },
+                "required": ["entry"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "append_to_daily_summary",
+            "description": (
+                "Append a block of content (e.g. an AI-generated summary) to a daily summary file. "
+                "Use this after synthesizing meetings, actions, and log entries into a narrative."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "content": {"type": "string", "description": "Markdown content to append"},
+                    "date": {"type": "string", "description": "Date (YYYY-MM-DD, default today)"},
+                },
+                "required": ["content"],
+            },
         },
     },
     {
@@ -479,6 +573,66 @@ def get_today(**_) -> str:
     return f"Today is {today.strftime('%A, %B %d, %Y')} ({today.isoformat()})"
 
 
+# ---------------------------------------------------------------------------
+# Daily summary tools
+# ---------------------------------------------------------------------------
+
+def _daily_path(date_str: str | None = None) -> Path:
+    from cli.paths import DAILY_DIR
+    d = date_str or date.today().isoformat()
+    DAILY_DIR.mkdir(parents=True, exist_ok=True)
+    return DAILY_DIR / f"{d}.md"
+
+
+def _ensure_daily_log_section(path: Path, date_str: str) -> None:
+    if not path.exists():
+        path.write_text(f"# Daily Summary — {date_str}\n\n## Log\n\n")
+
+
+def get_daily_summary(date: str | None = None) -> str:
+    path = _daily_path(date)
+    if not path.exists():
+        d = date or __import__("datetime").date.today().isoformat()
+        return f"No daily summary for {d} yet."
+    return path.read_text()
+
+
+def log_daily(entry: str, date: str | None = None) -> str:
+    import re as _re
+    from datetime import datetime as _dt
+    d = date or __import__("datetime").date.today().isoformat()
+    path = _daily_path(d)
+    _ensure_daily_log_section(path, d)
+
+    ts = _dt.now().strftime("%H:%M")
+    line = f"- {ts} — {entry}\n"
+
+    content = path.read_text()
+    log_match = _re.search(r"^## Log\s*\n", content, _re.MULTILINE)
+    if not log_match:
+        content += f"\n\n## Log\n\n{line}"
+    else:
+        rest = content[log_match.end():]
+        next_sec = _re.search(r"^##\s", rest, _re.MULTILINE)
+        if next_sec:
+            insert_at = log_match.end() + next_sec.start()
+            content = content[:insert_at] + line + "\n" + content[insert_at:]
+        else:
+            content = content.rstrip("\n") + "\n" + line
+
+    path.write_text(content)
+    return f"Logged {ts} — {entry} → daily_summaries/{d}.md"
+
+
+def append_to_daily_summary(content: str, date: str | None = None) -> str:
+    d = date or __import__("datetime").date.today().isoformat()
+    path = _daily_path(d)
+    _ensure_daily_log_section(path, d)
+    with path.open("a") as f:
+        f.write("\n" + content.strip() + "\n")
+    return f"Appended to daily_summaries/{d}.md"
+
+
 def search_meetings(
     date: str | None = None,
     date_from: str | None = None,
@@ -521,8 +675,9 @@ def search_meetings(
     return "\n".join(lines)
 
 
-def get_meeting_notes(slug: str) -> str:
+def get_meeting_notes(slug: str, follow_links: bool = True) -> str:
     from core.models import Meeting
+    from cli.link_utils import expand_links
     try:
         m = Meeting.objects.get(slug=slug)
     except Meeting.DoesNotExist:
@@ -535,7 +690,10 @@ def get_meeting_notes(slug: str) -> str:
     if not notes_path.exists():
         return f"Notes file not found: {m.notes_file}"
 
-    return notes_path.read_text()
+    content = notes_path.read_text()
+    if follow_links:
+        content = expand_links(content, BASE_DIR, visited=frozenset([slug]))
+    return content
 
 
 def search_documents(keyword: str | None = None, tag: str | None = None) -> str:
@@ -566,8 +724,9 @@ def search_documents(keyword: str | None = None, tag: str | None = None) -> str:
     return "\n".join(lines)
 
 
-def get_document(slug: str) -> str:
+def get_document(slug: str, follow_links: bool = True) -> str:
     from core.models import Document
+    from cli.link_utils import expand_links
     try:
         d = Document.objects.get(slug=slug)
     except Document.DoesNotExist:
@@ -577,7 +736,28 @@ def get_document(slug: str) -> str:
     if not doc_path.exists():
         return f"File not found on disk: {d.file_path}"
 
-    return doc_path.read_text()
+    content = doc_path.read_text()
+    if follow_links:
+        content = expand_links(content, BASE_DIR, visited=frozenset([slug]))
+    return content
+
+
+def get_note(filename: str, follow_links: bool = True) -> str:
+    from cli.link_utils import expand_links
+    from pathlib import PurePosixPath
+    safe = PurePosixPath(filename).name  # strip path traversal
+    if not safe.endswith(".md"):
+        safe += ".md"
+
+    note_path = BASE_DIR / "notes" / safe
+    if not note_path.exists():
+        return f"Note not found: notes/{safe}"
+
+    content = note_path.read_text()
+    slug = PurePosixPath(safe).stem  # filename without .md
+    if follow_links:
+        content = expand_links(content, BASE_DIR, visited=frozenset([slug]))
+    return content
 
 
 def search_people(keyword: str) -> str:
@@ -636,8 +816,79 @@ def search_actions(status: str | None = None, keyword: str | None = None) -> str
     return "\n".join(lines)
 
 
+def _search_notes_qmd(query: str, context_lines: int = 3) -> str:
+    """Hybrid search via qmd (vector + BM25 + LLM reranking)."""
+    qmd_bin = shutil.which("qmd")
+    if not qmd_bin:
+        return "qmd not installed. Run: npm install -g @tobilu/qmd"
+
+    cmd = [qmd_bin, "query", query, "--json", "-n", "8",
+           "-c", "provenance-notes"]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    except subprocess.TimeoutExpired:
+        return "qmd query timed out."
+    if result.returncode != 0:
+        stderr = result.stderr.strip()
+        return f"qmd error: {stderr}" if stderr else "qmd query failed."
+
+    import json as _json
+    stdout = result.stdout.strip()
+    # qmd may print progress text before JSON on first run (model downloads)
+    # Find the JSON array start
+    bracket = stdout.find("[")
+    if bracket > 0:
+        stdout = stdout[bracket:]
+    try:
+        items = _json.loads(stdout)
+    except _json.JSONDecodeError:
+        return "qmd returned invalid JSON."
+
+    if not items:
+        return f"No notes found for '{query}'."
+
+    hits = []
+    for item in items:
+        file_uri = item.get("file", "")
+        # qmd://provenance-notes/path.md → notes/path.md
+        rel = file_uri.replace("qmd://provenance-notes/", "notes/")
+        score = item.get("score", 0)
+        snippet = item.get("snippet", "").strip()
+
+        # Try to read the actual file and show context if available
+        full_path = BASE_DIR / rel
+        if full_path.exists() and context_lines > 0:
+            try:
+                text = full_path.read_text()
+                lines = text.splitlines()
+                terms = query.lower().split()
+                shown: set[int] = set()
+                for i, line in enumerate(lines):
+                    if any(t in line.lower() for t in terms):
+                        for j in range(
+                            max(0, i - context_lines),
+                            min(len(lines), i + context_lines + 1),
+                        ):
+                            shown.add(j)
+                if shown:
+                    excerpt = "\n".join(f"  {lines[i]}" for i in sorted(shown))
+                    hits.append(f"[{rel}] (score: {score:.2f})\n{excerpt}")
+                    continue
+            except Exception:
+                pass
+
+        # Fallback: use qmd's snippet
+        indented = "\n".join(f"  {l}" for l in snippet.splitlines())
+        hits.append(f"[{rel}] (score: {score:.2f})\n{indented}")
+
+    return "\n\n".join(hits)
+
+
 def search_notes(query: str, mode: str = "regex", context_lines: int = 3) -> str:
     notes_dir = BASE_DIR / "notes"
+
+    if mode == "qmd":
+        return _search_notes_qmd(query, context_lines)
 
     if mode in ("lex", "semantic"):
         # FTS5 — find matching files ranked by BM25, then extract context lines in Python.
@@ -1239,12 +1490,16 @@ def get_calendar_events(
 
 TOOL_FN = {
     "get_today": get_today,
+    "get_daily_summary": get_daily_summary,
+    "log_daily": log_daily,
+    "append_to_daily_summary": append_to_daily_summary,
     "search_meetings": search_meetings,
     "get_meeting_notes": get_meeting_notes,
     "add_meeting": add_meeting,
     "delete_meeting": delete_meeting,
     "search_documents": search_documents,
     "get_document": get_document,
+    "get_note": get_note,
     "search_people": search_people,
     "search_actions": search_actions,
     "search_notes": search_notes,

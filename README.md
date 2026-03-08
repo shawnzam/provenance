@@ -79,6 +79,13 @@ provenance people alex-rivera meetings --json \
   | provenance ai "write a short briefing before our next call"
 ```
 
+Notes, meeting files, and documents support `[[slug]]` wiki-links. When Claude reads a note, it follows links and embeds the referenced content inline — up to 2 hops. Supported targets: meetings, documents, freeform notes, and people.
+
+```markdown
+<!-- In any .md file -->
+See [[alex-rivera]] for background and [[ai-governance-framework]] for the full doc.
+```
+
 ---
 
 ## Requirements
@@ -90,6 +97,7 @@ provenance people alex-rivera meetings --json \
 | [Claude Desktop](https://claude.ai/download) | Optional — use as your AI interface (no OpenAI key needed) |
 | OpenAI API key | Optional — only for the standalone REPL and `ask`/`ai` commands |
 | [`icalBuddy`](https://hasseg.org/icalBuddy/) | Optional — macOS calendar access |
+| [qmd](https://github.com/tobi/qmd) | Optional — hybrid AI-powered notes search (vector + BM25 + LLM reranking) |
 
 ---
 
@@ -105,7 +113,7 @@ graph TD
 
     subgraph Tools["Tool Dispatcher — cli/tools.py"]
         CRM["CRM tools\npeople · meetings · actions"]
-        SEARCH["Search tools\nFTS5 · notes"]
+        SEARCH["Search tools\nFTS5 · qmd · notes"]
         CAL["Calendar tool\nget_calendar_events"]
         FILES["File tools\nwrite · append"]
     end
@@ -113,6 +121,7 @@ graph TD
     subgraph Storage["Local Storage"]
         DB[("SQLite\n~/.provenance/provenance.db")]
         FTS5["FTS5 virtual table\nnotes_fts"]
+        QMD["qmd index\n~/.cache/qmd/"]
         MD["Markdown files\n~/.provenance/notes/"]
     end
 
@@ -122,8 +131,10 @@ graph TD
 
     CRM --> DB
     SEARCH --> FTS5
+    SEARCH --> QMD
     FILES --> MD
     FILES --> FTS5
+    FILES -.->|"auto re-index"| QMD
     CAL --> IB["icalBuddy"]
 
     FTS5 -. "virtual table in" .-> DB

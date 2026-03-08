@@ -45,12 +45,13 @@ Search my notes for anything about the vendor evaluation
 | Tool | Description |
 |---|---|
 | `search_meetings` | Search meetings by date, person, or keyword |
-| `get_meeting_notes` | Read the full notes file for a meeting |
+| `get_meeting_notes` | Read the full notes file for a meeting; expands `[[wiki-links]]` inline |
+| `get_note` | Read a freeform note by filename; expands `[[wiki-links]]` inline |
 | `search_people` | Look up people by name, role, or org |
 | `search_actions` | Search action items by status or keyword |
-| `search_notes` | Full-text and semantic search across all notes |
+| `search_notes` | Full-text, semantic, and hybrid AI search across all notes (supports qmd) |
 | `search_documents` | Search imported documents |
-| `get_document` | Read an imported document |
+| `get_document` | Read an imported document; expands `[[wiki-links]]` inline |
 | `search_reading_list` | Search your reading list |
 | `get_calendar_events` | Read calendar events (requires icalBuddy) |
 | `get_today` | Get today's date |
@@ -84,6 +85,32 @@ People are matched by name or slug. Unrecognised names are skipped with a warnin
 
 ---
 
+## Wiki-links
+
+Notes, meeting files, and documents can link to each other using `[[slug]]` syntax. When Claude reads a file via `get_meeting_notes`, `get_document`, or `get_note`, it automatically follows links up to 2 hops deep and embeds the referenced content inline.
+
+**Supported link targets:**
+
+| `[[slug]]` resolves to | Example |
+|---|---|
+| Meeting (by slug) | `[[2026-03-10-intro-with-alex]]` |
+| Document (by slug) | `[[ai-governance-framework]]` |
+| Freeform note file (`notes/{slug}.md`) | `[[budget-notes]]` |
+| Person (by slug — renders inline summary) | `[[alex-rivera]]` |
+
+**Example in a meeting notes file:**
+
+```markdown
+## Notes
+
+Discussed the project roadmap. See [[ai-governance-framework]] for the framework
+we're aligning to, and [[alex-rivera]] for background on the attendee.
+```
+
+When Claude fetches that meeting, it gets the linked content embedded under a `### Linked: <slug>` header. Pass `follow_links: false` to any of the three tools to skip expansion.
+
+---
+
 ## Personal context — `my_profile` prompt
 
 Provenance ships with an MCP prompt that loads your `context.md` into the conversation. In Claude Desktop, open the prompt picker (the `+` icon or `/` slash menu) and select **my_profile**.
@@ -114,4 +141,10 @@ uv run --directory /path/to/provenance python mcp_server.py
 
 **No calendar results** — icalBuddy is not installed or your Outlook account isn't added to macOS Calendar. See [Calendar](calendar.md).
 
-**Stale search results** — Run `provenance index` to rebuild the FTS5 index.
+**Stale search results** — Run `provenance index` to rebuild the FTS5 index. If using qmd, also run `qmd update && qmd embed`.
+
+---
+
+## qmd MCP server (Claude Code)
+
+In addition to the Provenance MCP server, you can add [qmd](https://github.com/tobi/qmd) as a separate MCP server for direct hybrid AI search over your notes. See [search — qmd setup](commands/search.md#qmd-setup) for installation and configuration.

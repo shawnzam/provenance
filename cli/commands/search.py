@@ -20,6 +20,7 @@ def search(
     notes_only: bool = typer.Option(False, "--notes", help="Search notes only, skip database"),
     sem: bool = typer.Option(False, "--sem", help="Use semantic (FTS5) search in notes"),
     lex: bool = typer.Option(False, "--lex", help="Use BM25 full-text ranking in notes"),
+    qmd: bool = typer.Option(False, "--qmd", help="Use qmd hybrid AI search (vector + BM25 + LLM reranking)"),
     topk: int = typer.Option(10, "--topk", "-k", help="Max notes results (lex/sem only)"),
     context: int = typer.Option(2, "--context", "-C", help="Lines of context around each match"),
 ):
@@ -43,7 +44,7 @@ def search(
     if not db_only:
         if not notes_only and any(db_results.values()) and not piping:
             console.print("\n[bold]Notes[/bold]")
-        _search_notes_fts(q, sem=sem, lex=lex, topk=topk, context=context, piping=piping)
+        _search_notes_fts(q, sem=sem, lex=lex, qmd=qmd, topk=topk, context=context, piping=piping)
 
 
 def _search_db(query: str) -> dict:
@@ -143,12 +144,20 @@ def _search_notes_fts(
     query: str,
     sem: bool = False,
     lex: bool = False,
+    qmd: bool = False,
     topk: int = 10,
     context: int = 2,
     piping: bool = False,
 ):
     from cli.tools import search_notes
-    mode = "semantic" if sem else ("lex" if lex else "regex")
+    if qmd:
+        mode = "qmd"
+    elif sem:
+        mode = "semantic"
+    elif lex:
+        mode = "lex"
+    else:
+        mode = "regex"
     result = search_notes(query, mode=mode, context_lines=context)
     if result:
         console.print(result)
