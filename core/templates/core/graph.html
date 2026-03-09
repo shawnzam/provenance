@@ -326,6 +326,11 @@ async function init() {
   allNodes = data.nodes;
   allEdges = data.edges;
 
+  // Hide Unknown legend item if no unknown nodes exist
+  const hasUnknown = allNodes.some(n => n.type === "unknown");
+  const unknownLegend = document.querySelector(".legend-item[data-type='unknown']");
+  if (unknownLegend) unknownLegend.style.display = hasUnknown ? "" : "none";
+
   const edgeCounts = {};
   for (const e of allEdges) {
     edgeCounts[e.from] = (edgeCounts[e.from] || 0) + 1;
