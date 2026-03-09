@@ -46,6 +46,15 @@
     .legend-item.off { opacity: 0.35; }
     .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
+    #space-toggle { display: flex; gap: 3px; }
+    .space-btn {
+      font-size: 11px; padding: 3px 10px; border-radius: 20px; cursor: pointer;
+      border: 1px solid #2d3148; background: transparent; color: #94a3b8;
+      transition: all .15s;
+    }
+    .space-btn:hover { border-color: #4f5a72; color: #e2e8f0; }
+    .space-btn.active { background: #2d3148; color: #e2e8f0; border-color: #4f5a72; }
+
     #stats { font-size: 11px; color: #475569; white-space: nowrap; margin-left: auto; }
 
     #search-box {
@@ -199,6 +208,10 @@
     <span class="legend-item" data-type="note">    <span class="legend-dot" style="background:#94a3b8"></span>Notes</span>
     <span class="legend-item" data-type="unknown"> <span class="legend-dot" style="background:#f43f5e"></span>Unknown</span>
   </div>
+  <div id="space-toggle">
+    <button class="space-btn active" data-space="">All</button>
+    <button class="space-btn" data-space="work">Work</button>
+  </div>
   <span id="stats"></span>
 </header>
 
@@ -314,9 +327,22 @@ async function loadNode(slug) {
   }
 }
 
+// ── Space toggle ─────────────────────────────────────────────────
+let currentSpace = "";
+
+document.querySelectorAll(".space-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    currentSpace = btn.dataset.space;
+    document.querySelectorAll(".space-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    init();
+  });
+});
+
 // ── Graph init ───────────────────────────────────────────────────
 async function init() {
-  const resp = await fetch("/graph/data/");
+  const url = currentSpace ? `/graph/data/?space=${currentSpace}` : "/graph/data/";
+  const resp = await fetch(url);
   const data = await resp.json();
 
   document.getElementById("loading").style.display = "none";

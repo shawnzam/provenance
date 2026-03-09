@@ -379,7 +379,9 @@ TOOLS = [
             "name": "add_person",
             "description": (
                 "Add a new person to the CRM. Use when the user mentions someone who isn't already tracked. "
-                "Search first with search_people to avoid duplicates."
+                "Search first with search_people to avoid duplicates. "
+                "Tag personal contacts with 'personal' (e.g. tags='personal') so they are excluded "
+                "from the Work view of the graph and kept separate from professional contacts."
             ),
             "parameters": {
                 "type": "object",
@@ -390,7 +392,7 @@ TOOLS = [
                     "email": {"type": "string", "description": "Email address"},
                     "relationship_context": {"type": "string", "description": "How you know them / relevant context"},
                     "notes": {"type": "string", "description": "Additional notes"},
-                    "tags": {"type": "string", "description": "Comma-separated tags"},
+                    "tags": {"type": "string", "description": "Comma-separated tags. Use 'personal' to exclude from work graph."},
                 },
                 "required": ["name"],
             },

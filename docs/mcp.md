@@ -126,6 +126,29 @@ When Claude fetches that meeting, the governance framework content and Alex's pe
 
 ---
 
+## Work vs Personal separation
+
+The graph at `/graph/` has an **All / Work** toggle. The Work view hides:
+- People tagged `personal`
+- Meetings tagged `personal`
+- Notes in personal subdirectories (`notes/personal/`, `notes/london-trip/`, `notes/family/`, `notes/travel/`)
+
+**To add a personal contact:**
+```
+Add Miles Zamechek as a personal contact — son, tags: personal
+```
+
+Claude will call `add_person` with `tags="personal"` and he won't appear in the Work graph view.
+
+**To add a personal meeting or trip:**
+```
+Add a meeting "London Trip Planning" tagged personal, attendees: Miles Zamechek
+```
+
+**Note subdirectories** are automatically treated as personal if named: `personal/`, `london-trip/`, `family/`, or `travel/`. Drop notes there and they stay out of the Work view.
+
+---
+
 ## Personal context — `my_profile` prompt
 
 Provenance ships with an MCP prompt that loads your `context.md` into the conversation. In Claude Desktop, open the prompt picker (the `+` icon or `/` slash menu) and select **my_profile**.

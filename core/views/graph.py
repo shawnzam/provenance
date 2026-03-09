@@ -20,12 +20,19 @@ _WIKI_LINK_RE = re.compile(r"\[\[([^\]\n|]+)(?:\|[^\]]*)?\]\]")
 # Graph builder
 # ---------------------------------------------------------------------------
 
-def _build_graph() -> dict:
+def _has_tag(tags_str: str, tag: str) -> bool:
+    return any(t.strip().lower() == tag.lower() for t in tags_str.split(",") if t.strip())
+
+
+def _build_graph(space: str | None = None) -> dict:
     """
     Walk all .md files and return {nodes: [...], edges: [...]}.
 
-    Node schema:  {id, label, type, path}
+    Node schema:  {id, label, type, path, personal}
     Edge schema:  {from, to}
+
+    space="work"  → exclude nodes tagged "personal" and notes under personal paths
+    space=None    → include everything
     """
     from core.models import Meeting, Person
 
@@ -36,14 +43,21 @@ def _build_graph() -> dict:
     # ---- Seed nodes from DB ------------------------------------------------
 
     for p in Person.objects.all():
-        nodes[p.slug] = {"id": p.slug, "label": p.name, "type": "person", "path": None}
+        personal = _has_tag(p.tags, "personal")
+        if space == "work" and personal:
+            continue
+        nodes[p.slug] = {
+            "id": p.slug, "label": p.name, "type": "person",
+            "path": None, "personal": personal,
+        }
 
     for m in Meeting.objects.all():
+        personal = _has_tag(m.tags, "personal")
+        if space == "work" and personal:
+            continue
         nodes[m.slug] = {
-            "id": m.slug,
-            "label": m.title,
-            "type": "meeting",
-            "path": m.notes_file or None,
+            "id": m.slug, "label": m.title, "type": "meeting",
+            "path": m.notes_file or None, "personal": personal,
         }
 
     # ---- Walk notes/ for freeform files and extract links ------------------
@@ -58,8 +72,18 @@ def _build_graph() -> dict:
         if m.notes_file:
             file_to_meeting_slug[m.notes_file] = m.slug
 
+    # Personal note subdirectories — excluded in work space
+    PERSONAL_DIRS = {"personal", "london-trip", "family", "travel"}
+
     for md_file in sorted(notes_dir.rglob("*.md")):
         rel = str(md_file.relative_to(BASE_DIR))
+
+        # Check if this file lives under a personal subdirectory
+        parts = md_file.relative_to(notes_dir).parts
+        in_personal_dir = len(parts) > 1 and parts[0].lower() in PERSONAL_DIRS
+        if space == "work" and in_personal_dir:
+            continue
+
         # Use meeting DB slug if this file is a meeting note, else use file stem
         slug = file_to_meeting_slug.get(rel, md_file.stem)
 
@@ -164,8 +188,9 @@ def _title_from_file(path: Path) -> str:
 # ---------------------------------------------------------------------------
 
 def graph_data(request):
-    """JSON endpoint — returns nodes and edges."""
-    return JsonResponse(_build_graph())
+    """JSON endpoint — returns nodes and edges. Pass ?space=work to exclude personal."""
+    space = request.GET.get("space") or None
+    return JsonResponse(_build_graph(space=space))
 
 
 def graph_view(request):
