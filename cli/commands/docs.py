@@ -1,3 +1,13 @@
+"""
+Document commands — file-based, no DB.
+
+Documents are just .md files. The notes/docs/ directory is the canonical
+location, but any note can serve as a "document". Slugs = file stems.
+
+  provenance docs list
+  provenance docs show <slug>
+  provenance docs import <file> [--title "..."]
+"""
 import json
 import shutil
 from pathlib import Path
@@ -6,30 +16,41 @@ from typing import Optional
 import typer
 from rich.console import Console
 from rich.table import Table
-from cli.completions import complete_doc_slug, complete_tags
 
-app = typer.Typer(help="Manage reference documents.", no_args_is_help=True)
+from cli.paths import PROVENANCE_HOME as BASE_DIR
+
+app = typer.Typer(help="Manage reference documents (notes in notes/docs/).", no_args_is_help=True)
 console = Console()
 err = Console(stderr=True)
 
-from cli.paths import PROVENANCE_HOME as BASE_DIR
 DOCS_DIR = BASE_DIR / "notes" / "docs"
 
 
-def _get_doc(slug: str):
-    from core.models import Document
+def _title_from_file(path: Path) -> str:
+    """Extract first # heading or fall back to formatted stem."""
     try:
-        return Document.objects.get(slug=slug)
-    except Document.DoesNotExist:
-        err.print(f"[red]No document with slug '{slug}'.[/red]")
-        err.print("Run [bold]provenance docs list[/bold] to see available slugs.")
-        raise typer.Exit(1)
+        for line in path.read_text().splitlines():
+            if line.startswith("# "):
+                return line[2:].strip()
+    except OSError:
+        pass
+    return path.stem.replace("-", " ").replace("_", " ").title()
+
+
+def _find_note(slug: str) -> Path | None:
+    """Find a .md file in notes/ whose stem matches slug."""
+    notes_dir = BASE_DIR / "notes"
+    if not notes_dir.exists():
+        return None
+    for p in notes_dir.rglob("*.md"):
+        if p.stem == slug:
+            return p
+    return None
 
 
 def _pdf_to_markdown(pdf_path: Path) -> str:
-    """Convert a PDF to markdown text using pymupdf."""
     try:
-        import fitz  # pymupdf
+        import fitz
     except ImportError:
         err.print("[red]pymupdf is required for PDF import.[/red]")
         err.print("Run: uv add pymupdf")
@@ -54,41 +75,67 @@ def _pdf_to_markdown(pdf_path: Path) -> str:
 def list_docs(
     json_out: bool = typer.Option(False, "--json", help="Output as JSON"),
 ):
-    """List all tracked documents."""
-    from core.models import Document
-    docs = list(Document.objects.all())
+    """List all .md files in notes/docs/."""
+    DOCS_DIR.mkdir(parents=True, exist_ok=True)
+    files = sorted(DOCS_DIR.rglob("*.md"))
 
-    if json_out:
-        typer.echo(json.dumps([d.to_dict() for d in docs], indent=2))
+    if not files:
+        console.print("[dim]No documents yet. Drop a .md file in notes/docs/ or use [bold]provenance docs import[/bold].[/dim]")
         return
 
-    if not docs:
-        console.print("[dim]No documents yet. Use [bold]provenance docs import[/bold] to add one.[/dim]")
+    if json_out:
+        out = [{"slug": p.stem, "title": _title_from_file(p), "path": str(p.relative_to(BASE_DIR))} for p in files]
+        typer.echo(json.dumps(out, indent=2))
         return
 
     table = Table(show_header=True, header_style="bold blue")
     table.add_column("Slug")
     table.add_column("Title")
-    table.add_column("Source")
-    table.add_column("Tags")
+    table.add_column("Path", style="dim")
 
-    for d in docs:
-        tags = ", ".join(t.strip() for t in d.tags.split(",") if t.strip())
-        table.add_row(d.slug, d.title, d.source or "", tags)
+    for p in files:
+        table.add_row(p.stem, _title_from_file(p), str(p.relative_to(BASE_DIR)))
 
     console.print(table)
+
+
+@app.command("show")
+def show_doc(
+    slug: str = typer.Argument(..., help="File stem (slug) of the document"),
+    json_out: bool = typer.Option(False, "--json", help="Output as JSON"),
+):
+    """Show a document by its slug (file stem)."""
+    path = _find_note(slug)
+    if not path:
+        err.print(f"[red]No note found with slug '{slug}'.[/red]")
+        err.print("Run [bold]provenance docs list[/bold] or [bold]provenance notes list[/bold].")
+        raise typer.Exit(1)
+
+    title = _title_from_file(path)
+    rel = str(path.relative_to(BASE_DIR))
+
+    if json_out:
+        content = path.read_text()
+        typer.echo(json.dumps({"slug": slug, "title": title, "path": rel, "content": content}, indent=2))
+        return
+
+    console.print(f"\n[bold]{title}[/bold]  [dim]{slug}[/dim]")
+    console.print(f"  File: [dim]{rel}[/dim]")
+    content = path.read_text()
+    preview = content[:800]
+    console.print(f"\n[dim]--- Preview ---[/dim]\n{preview}")
+    if len(content) > 800:
+        console.print(f"[dim]… ({len(content)} chars total)[/dim]")
+    console.print()
 
 
 @app.command("import")
 def import_doc(
     file: Path = typer.Argument(..., help="Path to .md or .pdf file to import"),
-    title: Optional[str] = typer.Option(None, "--title", "-t", help="Title (defaults to filename stem)"),
-    tags: str = typer.Option("", "--tags", help="Comma-separated tags", autocompletion=complete_tags),
-    notes: str = typer.Option("", "--notes", "-n", help="Your notes about this document"),
+    title: Optional[str] = typer.Option(None, "--title", "-t", help="Override title (used as heading)"),
     json_out: bool = typer.Option(False, "--json", help="Output as JSON"),
 ):
-    """Import a .md or .pdf file into notes/docs/ and register it."""
-    from core.models import Document
+    """Copy a .md or .pdf file into notes/docs/ and index it."""
     from slugify import slugify
 
     if not file.exists():
@@ -103,122 +150,32 @@ def import_doc(
     doc_title = title or file.stem.replace("-", " ").replace("_", " ").title()
     slug = slugify(doc_title)
 
-    if Document.objects.filter(slug=slug).exists():
-        err.print(f"[red]A document with slug '{slug}' already exists.[/red]")
-        err.print(f"Use [bold]provenance docs show {slug}[/bold] to view it.")
+    DOCS_DIR.mkdir(parents=True, exist_ok=True)
+    dest_path = DOCS_DIR / f"{slug}.md"
+
+    if dest_path.exists():
+        err.print(f"[red]File already exists: {dest_path.relative_to(BASE_DIR)}[/red]")
         raise typer.Exit(1)
 
-    DOCS_DIR.mkdir(parents=True, exist_ok=True)
-    dest_name = f"{slug}.md"
-    dest_path = DOCS_DIR / dest_name
-    relative_path = f"notes/docs/{dest_name}"
-
     if suffix == ".pdf":
-        console.print(f"[dim]Converting PDF…[/dim]")
+        console.print("[dim]Converting PDF…[/dim]")
         content = _pdf_to_markdown(file)
         header = f"# {doc_title}\n\n_Imported from: {file.name}_\n\n---\n\n"
         dest_path.write_text(header + content)
-        source = file.name
     else:
         shutil.copy2(file, dest_path)
-        source = file.name if file.resolve() != dest_path.resolve() else ""
-
-    doc = Document.objects.create(
-        title=doc_title,
-        file_path=relative_path,
-        source=source,
-        tags=tags,
-        notes=notes,
-    )
+        # Ensure file has a # heading so title is discoverable
+        existing = dest_path.read_text()
+        if not existing.lstrip().startswith("# "):
+            dest_path.write_text(f"# {doc_title}\n\n{existing}")
 
     from cli.indexer import index_notes
     index_notes()
 
+    rel = str(dest_path.relative_to(BASE_DIR))
     if json_out:
-        typer.echo(json.dumps(doc.to_dict(), indent=2))
+        typer.echo(json.dumps({"slug": slug, "title": doc_title, "path": rel}, indent=2))
         return
 
-    console.print(f"[green]Imported[/green] {doc.title} ([bold]{doc.slug}[/bold])")
-    console.print(f"  File: [dim]{relative_path}[/dim]")
-    if suffix == ".pdf":
-        console.print(f"  Converted from PDF: [dim]{file.name}[/dim]")
-
-
-@app.command("add")
-def add_doc(
-    title: str = typer.Argument(..., help="Document title"),
-    file: Path = typer.Option(..., "--file", "-f", help="Path to existing .md file"),
-    tags: str = typer.Option("", "--tags", help="Comma-separated tags"),
-    notes: str = typer.Option("", "--notes", "-n", help="Your notes about this document"),
-    json_out: bool = typer.Option(False, "--json", help="Output as JSON"),
-):
-    """Register an existing .md file you placed manually in notes/docs/."""
-    from core.models import Document
-    from slugify import slugify
-
-    if not file.exists():
-        err.print(f"[red]File not found: {file}[/red]")
-        raise typer.Exit(1)
-
-    slug = slugify(title)
-    if Document.objects.filter(slug=slug).exists():
-        err.print(f"[red]A document with slug '{slug}' already exists.[/red]")
-        raise typer.Exit(1)
-
-    # Store path relative to project root if possible
-    try:
-        rel = file.resolve().relative_to(BASE_DIR)
-        file_path = str(rel)
-    except ValueError:
-        file_path = str(file.resolve())
-
-    doc = Document.objects.create(
-        title=title,
-        file_path=file_path,
-        tags=tags,
-        notes=notes,
-    )
-
-    from cli.indexer import index_notes
-    index_notes()
-
-    if json_out:
-        typer.echo(json.dumps(doc.to_dict(), indent=2))
-        return
-
-    console.print(f"[green]Added[/green] {doc.title} ([bold]{doc.slug}[/bold])")
-    console.print(f"  File: [dim]{file_path}[/dim]")
-
-
-@app.command("show")
-def show_doc(
-    slug: str = typer.Argument(..., help="Document slug", autocompletion=complete_doc_slug),
-    json_out: bool = typer.Option(False, "--json", help="Output as JSON"),
-):
-    """Show document details and a preview of its content."""
-    doc = _get_doc(slug)
-
-    if json_out:
-        typer.echo(json.dumps(doc.to_dict(), indent=2))
-        return
-
-    console.print(f"\n[bold]{doc.title}[/bold]  [dim]{doc.slug}[/dim]")
-    if doc.source:
-        console.print(f"  Source: {doc.source}")
-    console.print(f"  File:   {doc.file_path}")
-    if doc.tags:
-        tags = [t.strip() for t in doc.tags.split(",") if t.strip()]
-        console.print(f"  Tags:   {', '.join(tags)}")
-    if doc.notes:
-        console.print(f"\n[dim]Notes:[/dim] {doc.notes}")
-
-    doc_path = BASE_DIR / doc.file_path
-    if doc_path.exists():
-        content = doc_path.read_text()
-        preview = content[:800]
-        console.print(f"\n[dim]--- Preview ---[/dim]\n{preview}")
-        if len(content) > 800:
-            console.print(f"[dim]… ({len(content)} chars total)[/dim]")
-    else:
-        console.print(f"\n[red]File not found at {doc.file_path}[/red]")
-    console.print()
+    console.print(f"[green]Imported[/green] {doc_title} ([bold]{slug}[/bold])")
+    console.print(f"  File: [dim]{rel}[/dim]")

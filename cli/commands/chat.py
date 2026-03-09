@@ -288,18 +288,6 @@ def _open_in_editor(target: str, settings: dict) -> None:
         except Exception:
             pass
 
-    # Document slug
-    if not path:
-        try:
-            from core.models import Document
-            d = Document.objects.filter(slug=target).first()
-            if d:
-                p = BASE_DIR / d.file_path
-                if p.exists():
-                    path = p
-        except Exception:
-            pass
-
     # Fuzzy: notes file containing target string
     if not path:
         notes_dir = BASE_DIR / "notes"

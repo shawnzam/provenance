@@ -15,7 +15,7 @@ from cli.setup_django import setup  # noqa: E402
 
 setup()
 
-from cli.commands import people, meetings, actions, search, ai, docs, capture, chat, reading  # noqa: E402
+from cli.commands import people, meetings, actions, search, ai, docs, capture, chat, reading, daily, link  # noqa: E402
 from cli.commands import init  # noqa: E402
 
 app = typer.Typer(
@@ -29,6 +29,8 @@ app.add_typer(meetings.app, name="meetings")
 app.add_typer(actions.app, name="actions")
 app.add_typer(docs.app, name="docs")
 app.add_typer(reading.app, name="reading")
+app.add_typer(daily.app, name="daily")
+app.add_typer(link.app, name="link")
 
 # Single-command groups registered as commands
 app.command("search")(search.search)

@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Provenance — Link Graph</title>
+  <script src="https://unpkg.com/vis-network@9.1.9/dist/vis-network.min.js"></script>
+  <script src="https://unpkg.com/marked@12.0.0/marked.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 16px;
+      height: 48px;
+      background: #1a1d27;
+      border-bottom: 1px solid #2d3148;
+      flex-shrink: 0;
+      z-index: 20;
+    }
+    header h1 { font-size: 14px; font-weight: 600; color: #a5b4fc; white-space: nowrap; }
+
+    .legend { display: flex; gap: 6px; flex-wrap: wrap; }
+    .legend-item {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11px; color: #94a3b8;
+      padding: 3px 9px; border-radius: 20px;
+      border: 1px solid #2d3148;
+      cursor: pointer; user-select: none;
+      transition: opacity .15s, border-color .15s;
+    }
+    .legend-item:hover { border-color: #4f5a72; color: #e2e8f0; }
+    .legend-item.off { opacity: 0.35; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    #stats { font-size: 11px; color: #475569; white-space: nowrap; margin-left: auto; }
+
+    #search-box {
+      background: #252836; border: 1px solid #2d3148; border-radius: 6px;
+      color: #e2e8f0; font-size: 12px; padding: 4px 9px; outline: none; width: 160px;
+    }
+    #search-box:focus { border-color: #6366f1; }
+
+    /* ── Main area ───────────────────────────────────────────────── */
+    #main {
+      flex: 1;
+      display: flex;
+      position: relative;
+      min-height: 0;
+    }
+
+    /* ── Graph ───────────────────────────────────────────────────── */
+    #graph-wrap {
+      flex: 1;
+      position: relative;
+      min-width: 0;
+    }
+    #network {
+      width: 100%;
+      height: 100%;
+    }
+
+    #loading {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      color: #475569; font-size: 14px; pointer-events: none;
+    }
+
+    /* ── Hover tooltip ───────────────────────────────────────────── */
+    #tooltip {
+      position: absolute;
+      background: #1e2130; border: 1px solid #2d3148; border-radius: 8px;
+      padding: 9px 13px; font-size: 12px; pointer-events: none; display: none;
+      max-width: 240px; z-index: 30; box-shadow: 0 4px 20px rgba(0,0,0,.5);
+    }
+    #tooltip .tt-label { font-weight: 600; color: #e2e8f0; margin-bottom: 3px; }
+    #tooltip .tt-type  { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing:.06em; }
+    #tooltip .tt-hint  { font-size: 10px; color: #4f5a72; margin-top: 5px; }
+
+    /* ── Side panel ──────────────────────────────────────────────── */
+    #side-panel {
+      width: 420px;
+      min-width: 420px;
+      height: 100%;
+      background: #13161f;
+      border-left: 1px solid #2d3148;
+      display: flex;
+      flex-direction: column;
+      transition: width .22s ease, min-width .22s ease;
+      overflow: hidden;
+    }
+    #side-panel.hidden   { width: 0; min-width: 0; border-left: none; }
+    #side-panel.collapsed { width: 36px; min-width: 36px; }
+
+    #side-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 10px;
+      height: 40px;
+      border-bottom: 1px solid #2d3148;
+      flex-shrink: 0;
+      background: #1a1d27;
+    }
+    #side-title {
+      flex: 1;
+      font-size: 12px;
+      font-weight: 600;
+      color: #a5b4fc;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .side-btn {
+      background: none; border: none; cursor: pointer;
+      color: #64748b; font-size: 14px; padding: 4px 5px;
+      border-radius: 4px; line-height: 1; flex-shrink: 0;
+    }
+    .side-btn:hover { color: #e2e8f0; background: #252836; }
+
+    #side-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 18px 20px;
+      min-width: 380px; /* prevent reflow while collapsing */
+    }
+
+    /* ── Markdown styles ─────────────────────────────────────────── */
+    .md-content { line-height: 1.65; font-size: 13.5px; color: #cbd5e1; }
+    .md-content h1 { font-size: 17px; color: #e2e8f0; margin: 0 0 14px; font-weight: 700; }
+    .md-content h2 { font-size: 14px; color: #c7d2fe; margin: 22px 0 8px; font-weight: 600;
+                     border-bottom: 1px solid #1e2535; padding-bottom: 5px; }
+    .md-content h3 { font-size: 13px; color: #a5b4fc; margin: 16px 0 6px; font-weight: 600; }
+    .md-content p  { margin: 0 0 10px; }
+    .md-content ul, .md-content ol { margin: 0 0 10px 18px; }
+    .md-content li { margin-bottom: 3px; }
+    .md-content a  { color: #818cf8; text-decoration: none; }
+    .md-content a:hover { text-decoration: underline; }
+    .md-content strong { color: #e2e8f0; }
+    .md-content em { color: #94a3b8; font-style: italic; }
+    .md-content code {
+      font-family: "SF Mono", ui-monospace, monospace;
+      font-size: 12px;
+      background: #1e2535; color: #a5b4fc;
+      padding: 1px 5px; border-radius: 3px;
+    }
+    .md-content pre {
+      background: #0d1017; border: 1px solid #1e2535; border-radius: 6px;
+      padding: 12px; overflow-x: auto; margin: 0 0 12px;
+    }
+    .md-content pre code { background: none; padding: 0; color: #94a3b8; }
+    .md-content blockquote {
+      border-left: 3px solid #2d3148; padding-left: 12px;
+      margin: 0 0 10px; color: #64748b;
+    }
+    .md-content hr { border: none; border-top: 1px solid #1e2535; margin: 16px 0; }
+    .md-content table { border-collapse: collapse; width: 100%; margin-bottom: 12px; font-size: 12px; }
+    .md-content th { background: #1a1d27; color: #a5b4fc; padding: 5px 8px; text-align: left;
+                     border: 1px solid #2d3148; }
+    .md-content td { padding: 4px 8px; border: 1px solid #1e2535; }
+
+    /* wiki-link badges */
+    .md-content a[href^="#wiki-"] {
+      background: #1e2535; border: 1px solid #2d3148; border-radius: 4px;
+      padding: 1px 6px; font-size: 11px; color: #818cf8;
+    }
+
+    #side-loading { color: #475569; font-size: 13px; padding: 20px; }
+
+    /* Collapsed state — show only the collapse toggle rotated */
+    #side-panel.collapsed #side-title,
+    #side-panel.collapsed #btn-close,
+    #side-panel.collapsed #side-body { display: none; }
+    #side-panel.collapsed #side-header { justify-content: center; padding: 0; }
+    #side-panel.collapsed #btn-collapse { transform: rotate(180deg); }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Provenance — Link Graph</h1>
+  <input id="search-box" type="search" placeholder="Search nodes…" autocomplete="off">
+  <div class="legend" id="legend">
+    <span class="legend-item" data-type="person">  <span class="legend-dot" style="background:#818cf8"></span>People</span>
+    <span class="legend-item" data-type="meeting"> <span class="legend-dot" style="background:#34d399"></span>Meetings</span>
+    <span class="legend-item" data-type="note">    <span class="legend-dot" style="background:#94a3b8"></span>Notes</span>
+    <span class="legend-item" data-type="unknown"> <span class="legend-dot" style="background:#f43f5e"></span>Unknown</span>
+  </div>
+  <span id="stats"></span>
+</header>
+
+<div id="main">
+  <div id="graph-wrap">
+    <div id="loading">Loading graph…</div>
+    <div id="network"></div>
+    <div id="tooltip">
+      <div class="tt-type" id="tt-type"></div>
+      <div class="tt-label" id="tt-label"></div>
+      <div class="tt-hint">Click to open</div>
+    </div>
+  </div>
+
+  <div id="side-panel" class="hidden">
+    <div id="side-header">
+      <span id="side-title"></span>
+      <button class="side-btn" id="btn-collapse" title="Collapse">&#8250;</button>
+      <button class="side-btn" id="btn-close" title="Close">&#10005;</button>
+    </div>
+    <div id="side-body">
+      <div id="side-loading"></div>
+      <div id="side-content" class="md-content"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const TYPE_COLORS = {
+  person:  { bg: "#818cf8", border: "#6366f1", highlight: "#a5b4fc" },
+  meeting: { bg: "#34d399", border: "#10b981", highlight: "#6ee7b7" },
+  note:    { bg: "#94a3b8", border: "#64748b", highlight: "#cbd5e1" },
+  unknown: { bg: "#f43f5e", border: "#e11d48", highlight: "#fb7185" },
+};
+const TYPE_SHAPE = {
+  person: "ellipse", meeting: "box",
+  note: "dot", unknown: "triangleDown",
+};
+
+let network, nodeDataSet, edgeDataSet, allNodes, allEdges;
+
+// ── Side panel state ─────────────────────────────────────────────
+const panel      = document.getElementById("side-panel");
+const sideTitle  = document.getElementById("side-title");
+const sideLoad   = document.getElementById("side-loading");
+const sideContent= document.getElementById("side-content");
+const btnClose   = document.getElementById("btn-close");
+const btnCollapse= document.getElementById("btn-collapse");
+
+function openPanel(title, markdownOrHtml) {
+  sideTitle.textContent = title;
+  sideLoad.textContent  = "";
+  sideContent.innerHTML = markdownOrHtml;
+  panel.classList.remove("hidden", "collapsed");
+  // Refit graph to remaining width
+  setTimeout(() => network && network.fit({ animation: { duration: 300 } }), 240);
+}
+
+function showLoading(title) {
+  sideTitle.textContent = title;
+  sideLoad.textContent  = "Loading…";
+  sideContent.innerHTML = "";
+  panel.classList.remove("hidden", "collapsed");
+}
+
+btnClose.addEventListener("click", () => {
+  panel.classList.add("hidden");
+  setTimeout(() => network && network.fit({ animation: { duration: 300 } }), 240);
+});
+
+btnCollapse.addEventListener("click", () => {
+  if (panel.classList.contains("collapsed")) {
+    panel.classList.remove("collapsed");
+  } else {
+    panel.classList.add("collapsed");
+  }
+  setTimeout(() => network && network.fit({ animation: { duration: 300 } }), 240);
+});
+
+// Keyboard: Escape closes panel
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && !panel.classList.contains("hidden")) {
+    panel.classList.add("hidden");
+    setTimeout(() => network && network.fit({ animation: { duration: 300 } }), 240);
+  }
+});
+
+// ── Markdown rendering ───────────────────────────────────────────
+marked.setOptions({ gfm: true, breaks: false });
+
+function renderMarkdown(md) {
+  // Convert [[slug|label]] and [[slug]] to styled spans (not real links)
+  const withLinks = md.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, slug, label) => {
+    const display = label || slug;
+    return `<a href="#wiki-${slug}" onclick="loadNode('${slug}');return false;">${display}</a>`;
+  });
+  return marked.parse(withLinks);
+}
+
+async function loadNode(slug) {
+  const node = nodeDataSet ? nodeDataSet.get(slug) : null;
+  const title = node ? node.label : slug;
+  showLoading(title);
+
+  try {
+    const resp = await fetch(`/graph/node/${encodeURIComponent(slug)}/`);
+    if (!resp.ok) { throw new Error(resp.status === 404 ? "No content available." : `HTTP ${resp.status}`); }
+    const data = await resp.json();
+    openPanel(title, renderMarkdown(data.content));
+  } catch (err) {
+    sideLoad.textContent = "";
+    sideContent.innerHTML = `<p style="color:#f43f5e">${err.message}</p>`;
+  }
+}
+
+// ── Graph init ───────────────────────────────────────────────────
+async function init() {
+  const resp = await fetch("/graph/data/");
+  const data = await resp.json();
+
+  document.getElementById("loading").style.display = "none";
+  document.getElementById("stats").textContent =
+    `${data.nodes.length} nodes · ${data.edges.length} edges`;
+
+  allNodes = data.nodes;
+  allEdges = data.edges;
+
+  const edgeCounts = {};
+  for (const e of allEdges) {
+    edgeCounts[e.from] = (edgeCounts[e.from] || 0) + 1;
+    edgeCounts[e.to]   = (edgeCounts[e.to]   || 0) + 1;
+  }
+
+  const visNodes = allNodes.map(n => {
+    const c = TYPE_COLORS[n.type] || TYPE_COLORS.unknown;
+    const count = edgeCounts[n.id] || 0;
+    const size  = Math.max(14, Math.min(42, 14 + count * 3));
+    return {
+      id: n.id, label: n.label,
+      shape: TYPE_SHAPE[n.type] || "dot", size,
+      color: { background: c.bg, border: c.border,
+               highlight: { background: c.highlight, border: c.border } },
+      font: { color: "#e2e8f0", size: 12, face: "system-ui" },
+      borderWidth: 1.5, _meta: n,
+    };
+  });
+
+  const visEdges = allEdges.map((e, i) => ({
+    id: i, from: e.from, to: e.to,
+    arrows: { to: { enabled: true, scaleFactor: 0.45 } },
+    color: { color: "#2d3148", highlight: "#6366f1", hover: "#4f4f7a" },
+    width: 1, smooth: { type: "dynamic" },
+  }));
+
+  nodeDataSet = new vis.DataSet(visNodes);
+  edgeDataSet = new vis.DataSet(visEdges);
+
+  const container = document.getElementById("network");
+  network = new vis.Network(
+    container,
+    { nodes: nodeDataSet, edges: edgeDataSet },
+    {
+      physics: {
+        solver: "forceAtlas2Based",
+        forceAtlas2Based: { gravitationalConstant: -60, springLength: 120, springConstant: 0.05 },
+        stabilization: { iterations: 200, onlyDynamicEdges: false, fit: true },
+      },
+      interaction: { hover: true, tooltipDelay: 0, hideEdgesOnDrag: true },
+      layout: { improvedLayout: false },
+    }
+  );
+
+  network.once("stabilizationIterationsDone", () => {
+    network.fit({ animation: { duration: 600, easingFunction: "easeInOutQuad" } });
+  });
+
+  // ── Node click → open side panel ──────────────────────────────
+  network.on("click", ({ nodes }) => {
+    if (nodes.length === 1) loadNode(nodes[0]);
+  });
+
+  // ── Hover tooltip ──────────────────────────────────────────────
+  const tooltip = document.getElementById("tooltip");
+  network.on("hoverNode", ({ node, event }) => {
+    const n = nodeDataSet.get(node);
+    if (!n) return;
+    document.getElementById("tt-type").textContent  = n._meta.type;
+    document.getElementById("tt-label").textContent = n._meta.label;
+    tooltip.style.display = "block";
+    _posTooltip(event);
+  });
+  network.on("blurNode",  () => { tooltip.style.display = "none"; });
+  network.on("dragging",  () => { tooltip.style.display = "none"; });
+
+  function _posTooltip(ev) {
+    const r = container.getBoundingClientRect();
+    let x = ev.clientX - r.left + 12, y = ev.clientY - r.top + 12;
+    if (x + 260 > r.width)  x -= 270;
+    if (y + 90  > r.height) y -= 100;
+    tooltip.style.left = x + "px"; tooltip.style.top = y + "px";
+  }
+
+  // ── Type filter toggles ────────────────────────────────────────
+  const hiddenTypes = new Set();
+
+  function applyFilters() {
+    const searchQ = document.getElementById("search-box").value.trim().toLowerCase();
+    nodeDataSet.update(allNodes.map(n => {
+      const typeHidden   = hiddenTypes.has(n.type);
+      const searchHidden = searchQ && !n.label.toLowerCase().includes(searchQ) && !n.id.includes(searchQ);
+      return { id: n.id, hidden: typeHidden, opacity: searchHidden ? 0.12 : 1 };
+    }));
+    // Hide edges where either endpoint is a hidden type
+    edgeDataSet.update(allEdges.map((e, i) => {
+      const fromNode = nodeDataSet.get(e.from);
+      const toNode   = nodeDataSet.get(e.to);
+      const hidden   = (fromNode && fromNode.hidden) || (toNode && toNode.hidden);
+      return { id: i, hidden: !!hidden };
+    }));
+  }
+
+  document.getElementById("legend").addEventListener("click", e => {
+    const item = e.target.closest(".legend-item[data-type]");
+    if (!item) return;
+    const type = item.dataset.type;
+    if (hiddenTypes.has(type)) {
+      hiddenTypes.delete(type);
+      item.classList.remove("off");
+    } else {
+      hiddenTypes.add(type);
+      item.classList.add("off");
+    }
+    applyFilters();
+  });
+
+  // ── Search ─────────────────────────────────────────────────────
+  document.getElementById("search-box").addEventListener("input", function () {
+    applyFilters();
+    const q = this.value.trim().toLowerCase();
+    if (q) {
+      const hit = allNodes.find(n =>
+        !hiddenTypes.has(n.type) &&
+        (n.label.toLowerCase().includes(q) || n.id.includes(q))
+      );
+      if (hit) network.focus(hit.id, { scale: 1.3, animation: { duration: 400 } });
+    }
+  });
+}
+
+init().catch(e => {
+  document.getElementById("loading").textContent = "Error: " + e.message;
+});
+</script>
+</body>
+</html>

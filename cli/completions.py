@@ -41,14 +41,17 @@ def complete_meeting_slug(ctx, incomplete):
 
 
 def complete_doc_slug(ctx, incomplete):
-    if not _db():
-        return []
+    """Complete by file stem from notes/docs/."""
     try:
-        from core.models import Document
-        qs = Document.objects.filter(
-            slug__startswith=incomplete
-        ).values_list("slug", "title")[:20]
-        return [(slug, title) for slug, title in qs]
+        from cli.paths import PROVENANCE_HOME as BASE_DIR
+        docs_dir = BASE_DIR / "notes" / "docs"
+        if not docs_dir.exists():
+            return []
+        return [
+            (p.stem, p.stem)
+            for p in sorted(docs_dir.rglob("*.md"))
+            if p.stem.startswith(incomplete)
+        ][:20]
     except Exception:
         return []
 
@@ -90,18 +93,8 @@ def complete_attendees(ctx, incomplete):
 
 
 def complete_doc_or_file(ctx, incomplete):
-    """Complete doc slugs first, then fall back to filesystem paths."""
-    results = []
-
-    if _db():
-        try:
-            from core.models import Document
-            qs = Document.objects.filter(
-                slug__startswith=incomplete
-            ).values_list("slug", "title")[:10]
-            results.extend([(slug, title) for slug, title in qs])
-        except Exception:
-            pass
+    """Complete note slugs from notes/docs/, then fall back to filesystem paths."""
+    results = list(complete_doc_slug(ctx, incomplete))
 
     from pathlib import Path
     try:
@@ -139,7 +132,7 @@ def complete_tags(ctx, incomplete):
     if not _db():
         return []
     try:
-        from core.models import Person, Meeting, Document
+        from core.models import Person, Meeting
         parts = incomplete.split(",")
         current = parts[-1].strip()
         prefix = ",".join(parts[:-1])
@@ -147,7 +140,6 @@ def complete_tags(ctx, incomplete):
         for qs in [
             Person.objects.exclude(tags="").values_list("tags", flat=True),
             Meeting.objects.exclude(tags="").values_list("tags", flat=True),
-            Document.objects.exclude(tags="").values_list("tags", flat=True),
         ]:
             for tag_str in qs:
                 for t in tag_str.split(","):

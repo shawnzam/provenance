@@ -108,3 +108,5 @@ All data lives in `~/.provenance/`. The code repo contains no personal data.
 **REPL** — standalone interactive interface powered by OpenAI. Type questions naturally, use prefix shorthands (`@name`, `#meeting`, `+action`), or issue slash commands (`/recap`, `/focus`). See [REPL](repl.md).
 
 **`--check-text` / `-ct`** — proofread any free-text argument before it's saved: `provenance -ct people add "Tom Sevr" --context "Met hom last week"`.
+
+**Wiki-links** — any note, meeting file, or document can link to another using `[[slug]]` syntax. When Claude reads a note via MCP, it follows links automatically (up to 2 hops) and embeds the linked content inline. Supported targets: meetings, documents, freeform notes, and people. See [Claude Desktop](mcp.md#wiki-links).

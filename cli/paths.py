@@ -10,5 +10,6 @@ from pathlib import Path
 PROVENANCE_HOME = Path(os.environ.get("PROVENANCE_HOME", "~/.provenance")).expanduser()
 
 NOTES_DIR = PROVENANCE_HOME / "notes"
+DAILY_DIR = PROVENANCE_HOME / "daily_summaries"
 DB_PATH = PROVENANCE_HOME / "provenance.db"
 ENV_FILE = PROVENANCE_HOME / ".env"

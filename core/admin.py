@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Person, Meeting, ActionItem, Topic, Document, ReadingItem
+from .models import Person, Meeting, ActionItem, Topic, ReadingItem
 
 
 @admin.register(Person)
@@ -30,13 +30,6 @@ class TopicAdmin(admin.ModelAdmin):
     list_display = ["name", "slug"]
     search_fields = ["name", "description"]
     prepopulated_fields = {"slug": ("name",)}
-
-
-@admin.register(Document)
-class DocumentAdmin(admin.ModelAdmin):
-    list_display = ["title", "slug", "source", "file_path"]
-    search_fields = ["title", "tags", "notes", "source"]
-    prepopulated_fields = {"slug": ("title",)}
 
 
 @admin.register(ReadingItem)

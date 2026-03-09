@@ -487,7 +487,7 @@ def _meeting_q(word: str):
 def _db_context(query: str) -> str:
     """Return a compact text summary of DB matches for the query."""
     try:
-        from core.models import Person, Meeting, ActionItem, Document
+        from core.models import Person, Meeting, ActionItem
         from django.db.models import Q
         import functools, operator
 

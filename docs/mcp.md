@@ -45,13 +45,13 @@ Search my notes for anything about the vendor evaluation
 | Tool | Description |
 |---|---|
 | `search_meetings` | Search meetings by date, person, or keyword |
-| `get_meeting_notes` | Read the full notes file for a meeting; expands `[[wiki-links]]` inline |
-| `get_note` | Read a freeform note by filename; expands `[[wiki-links]]` inline |
+| `get_meeting_notes` | Read the full notes file for a meeting; follows `[[wiki-links]]` recursively (2 hops) |
+| `get_note` | Read any note by filename/slug; follows `[[wiki-links]]` recursively (2 hops) |
+| `get_document` | Read a note in `notes/docs/` by slug; follows `[[wiki-links]]` recursively (2 hops) |
+| `search_documents` | Search notes in `notes/docs/` by title or keyword |
 | `search_people` | Look up people by name, role, or org |
 | `search_actions` | Search action items by status or keyword |
 | `search_notes` | Full-text, semantic, and hybrid AI search across all notes (supports qmd) |
-| `search_documents` | Search imported documents |
-| `get_document` | Read an imported document; expands `[[wiki-links]]` inline |
 | `search_reading_list` | Search your reading list |
 | `get_calendar_events` | Read calendar events (requires icalBuddy) |
 | `get_today` | Get today's date |
@@ -85,29 +85,44 @@ People are matched by name or slug. Unrecognised names are skipped with a warnin
 
 ---
 
-## Wiki-links
+## Wiki-links and recursive expansion
 
-Notes, meeting files, and documents can link to each other using `[[slug]]` syntax. When Claude reads a file via `get_meeting_notes`, `get_document`, or `get_note`, it automatically follows links up to 2 hops deep and embeds the referenced content inline.
+Everything is a note — meeting notes, docs, freeform files. Notes link to each other and to DB entities using `[[slug]]` syntax.
 
-**Supported link targets:**
+When Claude reads a file via `get_meeting_notes`, `get_note`, or `get_document`, it **automatically follows `[[slug]]` links recursively up to 2 hops deep** and embeds the referenced content inline.
+
+**Resolution order (first match wins):**
 
 | `[[slug]]` resolves to | Example |
 |---|---|
-| Meeting (by slug) | `[[2026-03-10-intro-with-alex]]` |
-| Document (by slug) | `[[ai-governance-framework]]` |
-| Freeform note file (`notes/{slug}.md`) | `[[budget-notes]]` |
-| Person (by slug — renders inline summary) | `[[alex-rivera]]` |
+| Meeting DB record → its notes file | `[[2026-03-10-intro-with-alex]]` |
+| Any `.md` file in `notes/` whose stem matches | `[[wharton-ai-governance-framework-v01]]` |
+| Person DB record → inline summary | `[[alex-rivera]]` |
 
-**Example in a meeting notes file:**
+**How depth works:**
+
+```
+get_meeting_notes("2026-03-10-intro-with-alex")
+  └─ meeting notes (hop 0)
+       └─ [[wharton-ai-governance-framework-v01]] (hop 1) → embedded inline
+            └─ [[alex-rivera]] (hop 2) → embedded inline
+                 └─ (depth limit reached, no further expansion)
+```
+
+Each linked section is embedded under a `### Linked: <slug>` divider. Already-visited slugs are skipped with a note to prevent cycles.
+
+Pass `follow_links: false` to any of the three read tools to get raw content only.
+
+**Example:**
 
 ```markdown
 ## Notes
 
-Discussed the project roadmap. See [[ai-governance-framework]] for the framework
-we're aligning to, and [[alex-rivera]] for background on the attendee.
+Discussed the project roadmap. See [[wharton-ai-governance-framework-v01]] for
+the framework we're aligning to, and [[alex-rivera]] for background on the attendee.
 ```
 
-When Claude fetches that meeting, it gets the linked content embedded under a `### Linked: <slug>` header. Pass `follow_links: false` to any of the three tools to skip expansion.
+When Claude fetches that meeting, the governance framework content and Alex's person summary are both embedded inline — no extra tool calls needed.
 
 ---
 

@@ -63,14 +63,14 @@ TOOLS = [
         "function": {
             "name": "search_documents",
             "description": (
-                "Search documents (resumes, plans, frameworks, drafts, etc.) by title, tag, or keyword. "
-                "Returns title, slug, file path, and tags. Use get_document to read the full content."
+                "Search notes in notes/docs/ (resumes, plans, frameworks, drafts, etc.) by title or keyword. "
+                "Documents are plain markdown files — no separate database. "
+                "Returns slug (file stem) and path. Use get_document to read the full content."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "keyword": {"type": "string", "description": "Word or phrase in title, tags, or notes"},
-                    "tag": {"type": "string", "description": "Filter by tag (e.g. 'wharton', 'resume', 'linkedin', 'governance')"},
+                    "keyword": {"type": "string", "description": "Word or phrase to match against file title or content"},
                 },
             },
         },
@@ -80,17 +80,20 @@ TOOLS = [
         "function": {
             "name": "get_document",
             "description": (
-                "Read the full content of a document by its slug. Use after search_documents. "
-                "Wiki-links ([[slug]]) in the document are followed automatically (up to 2 hops) unless "
-                "follow_links is set to false."
+                "Read the full content of a note file by its slug (file stem). "
+                "Use after search_documents, or if you already know the slug. "
+                "Wiki-links ([[slug]]) are followed recursively up to 2 hops deep by default: "
+                "each [[slug]] in the file is resolved to the referenced note/meeting/person and "
+                "embedded inline under a '### Linked: <slug>' header. This lets you pull a rich "
+                "context tree from a single entry point. Pass follow_links=false to get raw content only."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "slug": {"type": "string", "description": "Document slug from search_documents"},
+                    "slug": {"type": "string", "description": "File stem slug (e.g. 'wharton-ai-governance-framework-v01')"},
                     "follow_links": {
                         "type": "boolean",
-                        "description": "Expand [[wiki-links]] inline (default true)",
+                        "description": "Recursively expand [[wiki-links]] up to 2 hops (default true). Each linked slug is resolved — Meeting → notes file, Person → inline summary, any .md file → content — and embedded inline.",
                     },
                 },
                 "required": ["slug"],
@@ -102,20 +105,22 @@ TOOLS = [
         "function": {
             "name": "get_note",
             "description": (
-                "Read a freeform note file from the notes/ directory by filename or slug. "
-                "Wiki-links ([[slug]]) in the note are followed automatically (up to 2 hops) unless "
-                "follow_links is set to false."
+                "Read any note file from the notes/ directory by filename or slug. "
+                "Use this for freeform notes, daily summaries, or any .md file outside notes/docs/. "
+                "Wiki-links ([[slug]]) are followed recursively up to 2 hops deep by default: "
+                "each [[slug]] in the note is resolved and embedded inline under '### Linked: <slug>'. "
+                "Pass follow_links=false to get raw content without link expansion."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "filename": {
                         "type": "string",
-                        "description": "Note filename (with or without .md extension, e.g. '2026-03-07-ideas')",
+                        "description": "Note filename or slug (with or without .md, e.g. '2026-03-07-ideas' or 'context')",
                     },
                     "follow_links": {
                         "type": "boolean",
-                        "description": "Expand [[wiki-links]] inline (default true)",
+                        "description": "Recursively expand [[wiki-links]] up to 2 hops (default true). Cycle-safe — already-visited slugs are noted but not re-expanded.",
                     },
                 },
                 "required": ["filename"],
@@ -697,49 +702,54 @@ def get_meeting_notes(slug: str, follow_links: bool = True) -> str:
 
 
 def search_documents(keyword: str | None = None, tag: str | None = None) -> str:
-    from core.models import Document
-    from django.db.models import Q
+    """Search .md files in notes/docs/ by title or keyword (file-based, no DB)."""
+    docs_dir = BASE_DIR / "notes" / "docs"
+    if not docs_dir.exists():
+        return "No documents found (notes/docs/ directory does not exist)."
 
-    qs = Document.objects.all()
-    if keyword:
-        qs = qs.filter(
-            Q(title__icontains=keyword)
-            | Q(tags__icontains=keyword)
-            | Q(notes__icontains=keyword)
-            | Q(source__icontains=keyword)
-        ).distinct()
-    if tag:
-        qs = qs.filter(tags__icontains=tag)
+    results = []
+    for p in sorted(docs_dir.rglob("*.md")):
+        title = ""
+        try:
+            for line in p.read_text().splitlines():
+                if line.startswith("# "):
+                    title = line[2:].strip()
+                    break
+        except OSError:
+            pass
+        title = title or p.stem.replace("-", " ").title()
 
-    docs = list(qs.order_by("title"))
-    if not docs:
-        return "No documents found."
+        if keyword:
+            kw = keyword.lower()
+            try:
+                content_lower = p.read_text().lower()
+            except OSError:
+                content_lower = ""
+            if kw not in title.lower() and kw not in content_lower:
+                continue
 
-    lines = []
-    for d in docs:
-        lines.append(f"Document: {d.title}")
-        lines.append(f"  Slug: {d.slug}  File: {d.file_path}")
-        if d.tags:
-            lines.append(f"  Tags: {d.tags}")
-    return "\n".join(lines)
+        rel = str(p.relative_to(BASE_DIR))
+        results.append(f"Document: {title}\n  Slug: {p.stem}  File: {rel}")
+
+    if not results:
+        return "No documents found matching that query."
+    return "\n".join(results)
 
 
 def get_document(slug: str, follow_links: bool = True) -> str:
-    from core.models import Document
+    """Read a note file by slug (file stem). Searches notes/ recursively."""
     from cli.link_utils import expand_links
-    try:
-        d = Document.objects.get(slug=slug)
-    except Document.DoesNotExist:
-        return f"No document with slug '{slug}'."
 
-    doc_path = BASE_DIR / d.file_path
-    if not doc_path.exists():
-        return f"File not found on disk: {d.file_path}"
+    notes_dir = BASE_DIR / "notes"
+    if notes_dir.exists():
+        for p in notes_dir.rglob("*.md"):
+            if p.stem == slug:
+                content = p.read_text()
+                if follow_links:
+                    content = expand_links(content, BASE_DIR, visited=frozenset([slug]))
+                return content
 
-    content = doc_path.read_text()
-    if follow_links:
-        content = expand_links(content, BASE_DIR, visited=frozenset([slug]))
-    return content
+    return f"No note found with slug '{slug}'. Use search_documents or search_notes to find it."
 
 
 def get_note(filename: str, follow_links: bool = True) -> str:

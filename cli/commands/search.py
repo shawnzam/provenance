@@ -48,7 +48,7 @@ def search(
 
 
 def _search_db(query: str) -> dict:
-    from core.models import Person, Meeting, ActionItem, Document
+    from core.models import Person, Meeting, ActionItem
     from django.db.models import Q
 
     q = query.strip()
@@ -73,17 +73,10 @@ def _search_db(query: str) -> dict:
         ).select_related("person", "meeting")
     )
 
-    documents = list(
-        Document.objects.filter(
-            Q(title__icontains=q) | Q(tags__icontains=q) | Q(notes__icontains=q) | Q(source__icontains=q)
-        )
-    )
-
     return {
         "people": [p.to_dict() for p in people],
         "meetings": [m.to_dict() for m in meetings],
         "actions": [a.to_dict() for a in actions],
-        "documents": [d.to_dict() for d in documents],
     }
 
 
@@ -127,18 +120,6 @@ def _print_db_results(results: dict, query: str):
         for a in actions:
             t.add_row(str(a["id"]), a["status"], a["description"][:60])
         console.print(t)
-
-    documents = results.get("documents", [])
-    if documents:
-        console.print(f"\n[bold]Documents[/bold]")
-        t = Table(show_header=True, header_style="bold blue", box=None, pad_edge=False)
-        t.add_column("Slug", style="dim")
-        t.add_column("Title")
-        t.add_column("Source")
-        for d in documents:
-            t.add_row(d["slug"], d["title"], d.get("source", ""))
-        console.print(t)
-
 
 def _search_notes_fts(
     query: str,

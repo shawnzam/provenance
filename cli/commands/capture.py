@@ -431,21 +431,16 @@ def _read_source(source: str) -> tuple[str, str]:
             return "", ""
         return _read_file(path), str(path)
 
-    # Otherwise treat as a doc slug — normalize underscores to hyphens
+    # Otherwise treat as a note slug — search notes/ by file stem
     slug = source.replace("_", "-")
-    try:
-        from core.models import Document
-        doc = Document.objects.get(slug=slug)
-        doc_path = BASE_DIR / doc.file_path
-        if not doc_path.exists():
-            err.print(f"[red]File not found at {doc.file_path}[/red]")
-            err.print("Run [bold]provenance docs list[/bold] to check the path.")
-            return "", ""
-        return _read_file(doc_path), f"{doc.title} ({doc.slug})"
-    except Exception:
-        err.print(f"[red]No document with slug '{source}'.[/red]")
-        err.print("Run [bold]provenance docs list[/bold] or pass a file path directly.")
-        return "", ""
+    notes_dir = BASE_DIR / "notes"
+    if notes_dir.exists():
+        for p in notes_dir.rglob("*.md"):
+            if p.stem == slug:
+                return _read_file(p), f"{slug} ({p.relative_to(BASE_DIR)})"
+    err.print(f"[red]No note found with slug '{slug}'.[/red]")
+    err.print("Run [bold]provenance docs list[/bold] or pass a file path directly.")
+    return "", ""
 
 
 def _read_file(path: Path) -> str:
