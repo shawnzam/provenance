@@ -297,6 +297,32 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "apply_wiki_links",
+            "description": (
+                "Scan notes and insert [[wiki-links]] for known people and meetings — "
+                "first occurrence of each name per file only. Safe to run repeatedly; "
+                "already-linked text and headings/code blocks are skipped. "
+                "Use this after adding new people or meetings, or to enrich a specific note. "
+                "Returns a summary of how many files and links were added."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "description": "Limit to one file (relative path from notes/, e.g. '2026-03-09-ideas.md'). Omit to scan all notes.",
+                    },
+                    "min_length": {
+                        "type": "integer",
+                        "description": "Minimum entity name length to link (default 4, raise to reduce noise)",
+                    },
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "write_note_file",
             "description": (
                 "Create or overwrite a freeform note file under notes/. "
@@ -1494,6 +1520,56 @@ def get_calendar_events(
     return f"{header}\n\n{raw}"
 
 
+def apply_wiki_links(file: str | None = None, min_length: int = 4) -> str:
+    """Scan notes and insert [[wiki-links]] for known people and meetings."""
+    from cli.commands.link import _build_entity_map, _insert_links
+    from cli.paths import PROVENANCE_HOME as BASE_DIR
+
+    entities = {k: v for k, v in _build_entity_map().items() if len(k) >= min_length}
+
+    if file:
+        p = BASE_DIR / "notes" / file if not file.startswith("/") else BASE_DIR / file
+        if not p.exists():
+            return f"File not found: {file}"
+        files = [p]
+    else:
+        notes_dir = BASE_DIR / "notes"
+        files = sorted(notes_dir.rglob("*.md")) if notes_dir.exists() else []
+
+    if not files:
+        return "No notes files found."
+
+    updated_files = 0
+    total_links = 0
+
+    for path in files:
+        original = path.read_text()
+        updated = _insert_links(original, entities)
+        if original == updated:
+            continue
+
+        # Count new [[links]] added
+        import re
+        before = len(re.findall(r"\[\[", original))
+        after = len(re.findall(r"\[\[", updated))
+        total_links += after - before
+
+        path.write_text(updated)
+        updated_files += 1
+
+    if updated_files == 0:
+        return "No changes needed — all names already linked or not found in notes."
+
+    from cli.indexer import index_notes
+    index_notes()
+
+    scope = f"notes/{file}" if file else "all notes"
+    return (
+        f"Added {total_links} wiki-link(s) across {updated_files} file(s) in {scope}. "
+        f"Run 'provenance link check' to verify all links resolve."
+    )
+
+
 # ---------------------------------------------------------------------------
 # Dispatcher
 # ---------------------------------------------------------------------------
@@ -1525,6 +1601,7 @@ TOOL_FN = {
     "update_person": update_person,
     "append_to_meeting_notes": append_to_meeting_notes,
     "write_note_file": write_note_file,
+    "apply_wiki_links": apply_wiki_links,
 }
 
 
