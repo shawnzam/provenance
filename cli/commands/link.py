@@ -238,6 +238,21 @@ def apply(
     console.print(f"\n[bold green]Done — {len(pending)} file(s) updated.[/bold green]")
 
 
+def _strip_broken_links(content: str) -> str:
+    """Unwrap [[slug]] links that don't resolve to any known entity."""
+    from cli.link_utils import resolve_slug
+
+    def _replace(m: re.Match) -> str:
+        raw = m.group(0)[2:-2]            # strip [[ ]]
+        slug = raw.split("|")[0].strip()
+        label = raw.split("|")[1].strip() if "|" in raw else slug
+        if resolve_slug(slug, BASE_DIR) is None:
+            return label  # unwrap to plain text
+        return m.group(0)  # keep valid link
+
+    return _EXISTING_LINK_RE.sub(_replace, content)
+
+
 @app.command("clean")
 def clean(
     file: Optional[str] = typer.Option(None, "--file", "-f", help="Limit to one file"),
@@ -253,24 +268,12 @@ def clean(
       provenance link clean --dry-run\n
       provenance link clean --yes
     """
-    from cli.link_utils import resolve_slug
-
     files = _get_target_files(file)
     pending: list[tuple[Path, str]] = []
 
-    def _strip_broken(content: str) -> str:
-        def _replace(m: re.Match) -> str:
-            raw = m.group(0)[2:-2]            # strip [[ ]]
-            slug = raw.split("|")[0].strip()
-            label = raw.split("|")[1].strip() if "|" in raw else slug
-            if resolve_slug(slug, BASE_DIR) is None:
-                return label  # unwrap to plain text
-            return m.group(0)  # keep valid link
-        return _EXISTING_LINK_RE.sub(_replace, content)
-
     for path in files:
         original = path.read_text()
-        updated = _strip_broken(original)
+        updated = _strip_broken_links(original)
         if original != updated:
             pending.append((path, updated))
 

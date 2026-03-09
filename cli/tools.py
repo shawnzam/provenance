@@ -1521,8 +1521,9 @@ def get_calendar_events(
 
 
 def apply_wiki_links(file: str | None = None, min_length: int = 4) -> str:
-    """Scan notes and insert [[wiki-links]] for known people and meetings."""
-    from cli.commands.link import _build_entity_map, _insert_links
+    """Scan notes: add [[wiki-links]] for known entities, remove broken ones."""
+    import re
+    from cli.commands.link import _build_entity_map, _insert_links, _strip_broken_links
     from cli.paths import PROVENANCE_HOME as BASE_DIR
 
     entities = {k: v for k, v in _build_entity_map().items() if len(k) >= min_length}
@@ -1539,35 +1540,46 @@ def apply_wiki_links(file: str | None = None, min_length: int = 4) -> str:
     if not files:
         return "No notes files found."
 
-    updated_files = 0
-    total_links = 0
+    links_added = 0
+    links_removed = 0
+    files_changed = 0
 
     for path in files:
         original = path.read_text()
-        updated = _insert_links(original, entities)
-        if original == updated:
+
+        # Step 1: remove broken links (deleted people, old slugs, etc.)
+        cleaned = _strip_broken_links(original)
+
+        # Step 2: insert links for known entities
+        updated = _insert_links(cleaned, entities)
+
+        if updated == original:
             continue
 
-        # Count new [[links]] added
-        import re
         before = len(re.findall(r"\[\[", original))
         after = len(re.findall(r"\[\[", updated))
-        total_links += after - before
+        diff = after - before
+        if diff > 0:
+            links_added += diff
+        else:
+            links_removed += abs(diff)
 
         path.write_text(updated)
-        updated_files += 1
+        files_changed += 1
 
-    if updated_files == 0:
-        return "No changes needed — all names already linked or not found in notes."
+    if files_changed == 0:
+        return "No changes needed — links are up to date."
 
     from cli.indexer import index_notes
     index_notes()
 
+    parts = []
+    if links_added:
+        parts.append(f"added {links_added} link(s)")
+    if links_removed:
+        parts.append(f"removed {links_removed} broken link(s)")
     scope = f"notes/{file}" if file else "all notes"
-    return (
-        f"Added {total_links} wiki-link(s) across {updated_files} file(s) in {scope}. "
-        f"Run 'provenance link check' to verify all links resolve."
-    )
+    return f"Updated {files_changed} file(s) in {scope}: {', '.join(parts)}."
 
 
 # ---------------------------------------------------------------------------
